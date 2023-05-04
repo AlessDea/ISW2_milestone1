@@ -26,6 +26,8 @@ public class FIlesRet {
     public static List<Ref> tags = new ArrayList<>();
     public static Repository repository;
 
+    public static ArrayList<Release> releases = new ArrayList<>();
+
 
     /*
     * Le release sono quelle i cui commit hanno un tag. Notare che quelli validi sono quelli dalla release 1.2.1, quelli
@@ -37,22 +39,48 @@ public class FIlesRet {
         int len;
         List<Ref> call = jGit.tagList().call();
 
+        RevWalk walk = new RevWalk(repository);
+
         for (Ref ref : call) {
             RevCommit commit = repository.parseCommit(ref.getObjectId());
-            /*if(commit.getFullMessage().contains("prepare release")){ // per escludere le release prima della 1.2.1 che sono di fork e non del repo principale
-                tags.add(ref);
-                //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
-            }*/
-            tags.add(ref);
+
+            //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
+
+            RevTag tag = walk.parseTag(ref.getObjectId());
+
+            Calendar calendar = new GregorianCalendar();
+            calendar.setTimeInMillis(tag.getTaggerIdent().getWhen().getTime());
+
+            releases.add(new Release(ref, calendar));
+
         }
+
+        releases.sort(new Comparator<Release>() {
+            @Override
+            public int compare(Release o1, Release o2) {
+                return o1.getDate().getTime().compareTo(o2.getDate().getTime());
+            }
+        });
+
+        for(Release r : releases){
+            tags.add(r.getRef()); //li inserisco in tag in modo ordinato
+
+            /*int year = r.getDate().get(Calendar.YEAR);
+            int month = r.getDate().get(Calendar.MONTH) + 1;
+            int day = r.getDate().get(Calendar.DAY_OF_MONTH);
+            System.out.println("Date: " + day + "/" + month + "/"+ year);*/
+        }
+
 
         // scarta l'ultimo 50% delle release
         len = tags.size();
         System.out.println(len);
         for(int i =  len - 1; i > len/2; i--){
             tags.remove(i);
+            releases.remove(i);
         }
     }
+
 
     /*
     * Una volta prese tutte le release vado a vedere a quei commit tutti i cambiamenti fatti ad ogni file
@@ -138,10 +166,11 @@ public class FIlesRet {
     public static int iterateAndCompareFiles(String name, String path, int relNum){
         for(RepoFile f : files){
             if(f.equals(name)){
-                if(path.equals(f.getPaths().get(relNum)))
-                    return files.indexOf(f);
-                else
-                    continue;
+                if(f.getPaths().size() > 0) {
+                    if (path.equals(f.getPaths().get(f.getPaths().size()-1))) {
+                        return files.indexOf(f);
+                    }
+                }
             }
         }
         return -1;
@@ -153,7 +182,8 @@ public class FIlesRet {
         // a RevWalk allows to walk over commits based on some filtering that is defined
         RevWalk walk = new RevWalk(repository);
 
-        RevCommit commit = walk.parseCommit(head.toObjectId());
+        RevCommit commit = walk.parseCommit(head.toObjectId()); //TODO: fai questo per ottenere un oggetto commit da un ObjectID
+
         RevTree tree = commit.getTree();
 
 
@@ -171,6 +201,7 @@ public class FIlesRet {
 
                 tkns = treeWalk.getPathString().split("/");
                 if(!treeWalk.getPathString().contains("/test")){
+                    //System.out.println("Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
                     ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString(), releaseNumber-1);
 
                     if (ret >= 0) {
@@ -180,18 +211,18 @@ public class FIlesRet {
                         files.get(ret).insertPath(treeWalk.getPathString());
                         files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
-                        System.out.println("if: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
-                        files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), tags.get(releaseNumber-2).getObjectId().getName(), tags.get(releaseNumber-1).getObjectId().getName()));
+                        //System.out.println("if: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
+                        files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), tags.get(releaseNumber-1).getObjectId().getName()));
 
                     } else {
-                        System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
+                        //System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
                         RepoFile rf = new RepoFile(tkns[tkns.length - 1]);
                         rf.insertRelease(rel);
                         rf.insertPath(treeWalk.getPathString());
                         rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         rf.insertChurn(0);
                         rf.setRevisionFirstAppearance(releaseNumber);
-                        rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), null, tags.get(releaseNumber-1).getObjectId().getName()));
+                        rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), tags.get(releaseNumber-1).getObjectId().getName()));
                         files.add(rf);
                     }
                 }
@@ -225,43 +256,22 @@ public class FIlesRet {
     }
 
 
-    public static int countAuthorsInFile(String filePath, String fromCommit, String toCommit) throws IOException, GitAPIException {
+    public static int countAuthorsInFile(String filePath, String toCommit) throws IOException, GitAPIException {
         int authorsCount = 0;
-        ObjectId from;
 
-        if(fromCommit != null)
-            from = repository.resolve(fromCommit);
-        else
-            from = null;
 
         ObjectId to = repository.resolve(toCommit);
+
 
         BlameResult blameResult = new Git(repository).blame()
                 .setFilePath(filePath)
                 .setStartCommit(to)
-                .setFollowFileRenames(true)
-                .setTextComparator(RawTextComparator.DEFAULT)
                 .call();
 
         Set<String> authors = new HashSet<>();
         for (int i = 0; i < blameResult.getResultContents().size(); i++) {
             authors.add(blameResult.getSourceAuthor(i).getName());
-        }
-
-        // If from commit is specified, remove authors of lines added in that commit
-        if (from != null) {
-            BlameResult oldBlameResult = new Git(repository).blame()
-                    .setFilePath(filePath)
-                    .setStartCommit(from)
-                    .setFollowFileRenames(true)
-                    .setTextComparator(RawTextComparator.DEFAULT)
-                    .call();
-
-            for (int i = 0; i < oldBlameResult.getResultContents().size(); i++) {
-                if (oldBlameResult.getSourceCommit(i).equals(from)) {
-                    authors.remove(oldBlameResult.getSourceAuthor(i).getName());
-                }
-            }
+            //System.out.println(blameResult.getSourceAuthor(i).getName());
         }
 
         authorsCount = authors.size();
