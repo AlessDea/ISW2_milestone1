@@ -2,20 +2,25 @@ package com.mycompany.app;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
+import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.blame.BlameResult;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.RawTextComparator;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.revwalk.*;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
 
 import java.io.*;
 import java.util.*;
+
+import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
@@ -34,7 +39,7 @@ public class FIlesRet {
     * precedenti non fanno parte della repository principale ma di un fork probabilmente.
     *
     * */
-    public static void retrieveTags() throws GitAPIException, IOException {
+    /*public static void retrieveTags() throws GitAPIException, IOException {
         Git jGit = new Git(repository);
         int len;
         List<Ref> call = jGit.tagList().call();
@@ -53,6 +58,7 @@ public class FIlesRet {
 
             releases.add(new Release(ref, calendar));
 
+
         }
 
         releases.sort(new Comparator<Release>() {
@@ -65,10 +71,10 @@ public class FIlesRet {
         for(Release r : releases){
             tags.add(r.getRef()); //li inserisco in tag in modo ordinato
 
-            /*int year = r.getDate().get(Calendar.YEAR);
+            *//*int year = r.getDate().get(Calendar.YEAR);
             int month = r.getDate().get(Calendar.MONTH) + 1;
             int day = r.getDate().get(Calendar.DAY_OF_MONTH);
-            System.out.println("Date: " + day + "/" + month + "/"+ year);*/
+            System.out.println("Date: " + day + "/" + month + "/"+ year);*//*
         }
 
 
@@ -79,13 +85,13 @@ public class FIlesRet {
             tags.remove(i);
             releases.remove(i);
         }
-    }
+    }*/
 
 
     /*
     * Una volta prese tutte le release vado a vedere a quei commit tutti i cambiamenti fatti ad ogni file
     * */
-    public static List<Ref> retrieveBranches() throws GitAPIException {
+    /*public static List<Ref> retrieveBranches() throws GitAPIException {
         Git jGit = new Git(repository);
         List<Ref> call = jGit.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
         int n = 0;
@@ -97,7 +103,7 @@ public class FIlesRet {
         }
         System.out.println(n);
         return call;
-    }
+    }*/
 
 
     public static void writeOnFile(){
@@ -105,22 +111,21 @@ public class FIlesRet {
         int numVersions;
         int j;
         try {
-            fileWriter = null;
             String outname = projName + "FilesInfo.csv";
             //Name of CSV for output
             fileWriter = new FileWriter(outname);
             fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Number of Authors");
             fileWriter.append("\n");
-            numVersions = tags.size();
+            numVersions = relNames.size();
             for (int i = 0; i < numVersions; i++) {
 
                 for (RepoFile file : files) {
 
-                    if ((i >= file.getRevisionFirstAppearance() - 1) && (file.getRevisions() > 0)) {
+                    if ((i >= file.getRevisionFirstAppearance() - 1) && (file.getAppearances() > 0)) {
                         fileWriter.append(Integer.toString(i+1));
                         fileWriter.append(",");
 
-                        fileWriter.append(tags.get(i).getName());
+                        fileWriter.append(relNames.get(i));
                         fileWriter.append(",");
 
                         fileWriter.append(file.getPaths().get(0));
@@ -133,17 +138,17 @@ public class FIlesRet {
                         fileWriter.append(",");
 
                         fileWriter.append((Integer.toString(i - file.getRevisionFirstAppearance() + 1)));
-                        fileWriter.append(",");
+                        /*fileWriter.append(",");
 
-                        fileWriter.append((file.getnAuth().get(0).toString()));
+                        fileWriter.append((file.getnAuth().get(0).toString()));*/
                         fileWriter.append("\n");
 
                         file.getPaths().remove(0);
                         file.getLOCs().remove(0);
                         file.getChurn().remove(0);
-                        file.getnAuth().remove(0);
+                        //file.getnAuth().remove(0);
 
-                        file.decRevisions();
+                        file.decAppearances();
                     }
                 }
             }
@@ -179,10 +184,11 @@ public class FIlesRet {
     public static void listRepositoryContents(String rel, int releaseNumber) throws IOException, GitAPIException {
         ObjectId head = repository.resolve(rel);
 
+        //System.out.println(head.getName());
         // a RevWalk allows to walk over commits based on some filtering that is defined
         RevWalk walk = new RevWalk(repository);
 
-        RevCommit commit = walk.parseCommit(head.toObjectId()); //TODO: fai questo per ottenere un oggetto commit da un ObjectID
+        RevCommit commit = walk.parseCommit(head.toObjectId());
 
         RevTree tree = commit.getTree();
 
@@ -206,13 +212,14 @@ public class FIlesRet {
 
                     if (ret >= 0) {
 
-                        files.get(ret).incRevisions();
+                        files.get(ret).incAppearances();
                         files.get(ret).insertRelease(rel);
                         files.get(ret).insertPath(treeWalk.getPathString());
                         files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
                         //System.out.println("if: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
-                        files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), tags.get(releaseNumber-1).getObjectId().getName()));
+                        //files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
+                        files.get(ret).insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
 
                     } else {
                         //System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
@@ -222,7 +229,8 @@ public class FIlesRet {
                         rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         rf.insertChurn(0);
                         rf.setRevisionFirstAppearance(releaseNumber);
-                        rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), tags.get(releaseNumber-1).getObjectId().getName()));
+                        //rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
+                        rf.insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
                         files.add(rf);
                     }
                 }
@@ -260,7 +268,7 @@ public class FIlesRet {
         int authorsCount = 0;
 
 
-        ObjectId to = repository.resolve(toCommit);
+        ObjectId to = repository.resolve(toCommit); //resolve the commit id from the tag name
 
 
         BlameResult blameResult = new Git(repository).blame()
@@ -279,6 +287,61 @@ public class FIlesRet {
     }
 
 
+    public static int countCommits(Repository repository, String file, String currentRelease) throws IOException, GitAPIException {
+        RevWalk walk = new RevWalk(repository);
+        Git git = new Git(repository);
+        int c = 0;
+
+        ObjectReader reader = repository.newObjectReader();
+        CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
+        CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
+
+        // prendi gli object id delle release
+        ObjectId objNewId = repository.resolve(currentRelease);
+
+        RevCommit curRelCommit = walk.parseCommit(objNewId);
+
+        // fai il log dell'ultima release e prendi tutti i commit
+        LogCommand log = git.log().add(curRelCommit);
+
+        Iterable<RevCommit> commits = log.call();
+
+        ArrayList<RevCommit> relCommits = new ArrayList<>();
+        for(RevCommit com : commits){
+            relCommits.add(com);
+        }
+
+
+        for(RevCommit commit : relCommits) {
+            if(relCommits.indexOf(commit) == relCommits.size()-1)
+                break;
+
+            RevTree tree1 = commit.getTree();
+            newTreeIter.reset(reader, tree1);
+
+            RevTree tree2 = relCommits.get(relCommits.indexOf(commit) + 1).getTree();
+            oldTreeIter.reset(reader, tree2);
+
+            DiffFormatter diffFormatter = new DiffFormatter( DisabledOutputStream.INSTANCE );
+            diffFormatter.setRepository(repository);
+            List<DiffEntry> entries = diffFormatter.scan(oldTreeIter, newTreeIter);
+
+            //System.out.println(commit + "     c: " + c);
+            for( DiffEntry entry : entries ) {
+                if(entry.getNewPath().equals(file)){
+                    //System.out.println(entry.getNewPath());
+                    c++;
+                }
+
+            }
+        }
+
+        System.out.println(c);
+
+        return c;
+    }
+
+
     public static void main(String[] args) throws IOException, GitAPIException {
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         int relNum = 0;
@@ -287,32 +350,22 @@ public class FIlesRet {
                 .findGitDir().build();
 
 
-        /* prendi tutti i tag in quanto sono le release */
-        retrieveTags();
+        retrieveReleases();
 
 
         /* per ogni release (tag) lista i file */
-        for(Ref release : tags) {
+        for(String releaseName : relNames) {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
-            listRepositoryContents(release.getName(), relNum);
+            listRepositoryContents(releaseName, relNum);
         }
-/*
-        for(RepoFile f : files){
-            System.out.println("File name: " + f.getName() + " Versions: " + f.getVersions() + " Releases: " + f.getReleases());
-            System.out.println(f.getPaths());
-        }*/
 
-        /* Scrivi il file */
+        // Scrivi il file
         writeOnFile();
 
 
         repository.close();
 
     }
-
-
-
-
 
 }

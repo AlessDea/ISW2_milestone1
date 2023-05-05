@@ -5,7 +5,7 @@ import java.util.ArrayList;
 public class RepoFile
 {
     private String name;
-    private int revisions;
+    private int appearances;
     private ArrayList<String> releases;
     private ArrayList<String> paths;
     private ArrayList<Integer> LOCs;
@@ -13,17 +13,19 @@ public class RepoFile
     private ArrayList<Integer> churn; /* between two release : |added - deleted| -> questo può essere fatto facendo la differenza tra i LOC delle release da verificare*/
     private int revisionFirstAppearance;
     private ArrayList<Integer> nAuth;
+    private ArrayList<Integer> revisions;
 
 
     public RepoFile(String name) {
         this.name = name;
-        this.revisions = 1;
+        this.appearances = 1;
         this.releases = new ArrayList<>();
         this.paths = new ArrayList<>();
         this.LOCs = new ArrayList<>();
         this.touchedLOCs = new ArrayList<>();
         this.churn = new ArrayList<>();
         this.nAuth = new ArrayList<>();
+        this.revisions = new ArrayList<>();
 
     }
 
@@ -35,18 +37,6 @@ public class RepoFile
         return name;
     }
 
-    /* increment */
-    public void incRevisions() {
-        this.revisions++;
-    }
-
-    public void decRevisions() {
-        this.revisions--;
-    }
-
-    public int getRevisions() {
-        return revisions;
-    }
 
     public Boolean equals(String name){
         if(this.getName().equals(name))
@@ -122,5 +112,25 @@ public class RepoFile
 
     public ArrayList<Integer> getnAuth() {
         return nAuth;
+    }
+
+    public void insertRevisions(Integer revision) {
+        this.revisions.add(revision);
+    }
+
+    public ArrayList<Integer> getRevisions() {
+        return this.revisions;
+    }
+
+    public int getAppearances() {
+        return appearances;
+    }
+
+    public void incAppearances() {
+        this.appearances += 1;
+    }
+
+    public void decAppearances() {
+        this.appearances -= 1;
     }
 }

@@ -9,10 +9,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.*;
 
 
 public class getReleaseInfo {
@@ -21,8 +18,9 @@ public class getReleaseInfo {
     public static HashMap<LocalDateTime, String> releaseID;
     public static ArrayList<LocalDateTime> releases;
     public static Integer numVersions;
+    public static List<String> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
 
-    public static void main(String[] args) throws IOException, JSONException {
+    public static void retrieveReleases() throws IOException, JSONException {
 
         String projName = "SYNCOPE";
         //Fills the arraylist with releases dates and orders them
@@ -53,42 +51,25 @@ public class getReleaseInfo {
                 return o1.compareTo(o2);
             }
         });
-        if (releases.size() < 6)
-            return;
-        FileWriter fileWriter = null;
-        try {
-            fileWriter = null;
-            String outname = projName + "VersionInfo.csv";
-            //Name of CSV for output
-            fileWriter = new FileWriter(outname);
-            fileWriter.append("Index,Version ID,Version Name,Date");
-            fileWriter.append("\n");
-            numVersions = releases.size();
-            for (i = 0; i < releases.size(); i++) {
-                Integer index = i + 1;
-                fileWriter.append(index.toString());
-                fileWriter.append(",");
-                fileWriter.append(releaseID.get(releases.get(i)));
-                fileWriter.append(",");
-                fileWriter.append(releaseNames.get(releases.get(i)));
-                fileWriter.append(",");
-                fileWriter.append(releases.get(i).toString());
-                fileWriter.append("\n");
-            }
 
-        } catch (Exception e) {
-            System.out.println("Error in csv writer");
-            e.printStackTrace();
-        } finally {
-            try {
-                fileWriter.flush();
-                fileWriter.close();
-            } catch (IOException e) {
-                System.out.println("Error while flushing/closing fileWriter !!!");
-                e.printStackTrace();
+
+        for(LocalDateTime ldt : releases){
+            for(LocalDateTime l : releaseNames.keySet()) {
+                if(l.equals(ldt))
+                    relNames.add("refs/tags/syncope-" + releaseNames.get(l));
             }
         }
-        return;
+
+        /*for(String s:relNames)
+            System.out.println(s);*/
+
+        // scarta l'ultimo 50% delle release
+        int len = relNames.size();
+        System.out.println(len);
+        for(int j =  len - 1; j > len/2; j--){
+            relNames.remove(j);
+        }
+
     }
 
 
