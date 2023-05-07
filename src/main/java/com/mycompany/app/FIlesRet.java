@@ -5,10 +5,10 @@ import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.blame.BlameResult;
-import org.eclipse.jgit.diff.DiffEntry;
-import org.eclipse.jgit.diff.DiffFormatter;
-import org.eclipse.jgit.diff.RawTextComparator;
+import org.eclipse.jgit.diff.*;
 import org.eclipse.jgit.lib.*;
+import org.eclipse.jgit.patch.FileHeader;
+import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.*;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
@@ -114,7 +114,7 @@ public class FIlesRet {
             String outname = projName + "FilesInfo.csv";
             //Name of CSV for output
             fileWriter = new FileWriter(outname);
-            fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Number of Authors");
+            fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Number of Authors, Revisions, LOC Touched");
             fileWriter.append("\n");
             numVersions = relNames.size();
             for (int i = 0; i < numVersions; i++) {
@@ -138,15 +138,24 @@ public class FIlesRet {
                         fileWriter.append(",");
 
                         fileWriter.append((Integer.toString(i - file.getRevisionFirstAppearance() + 1)));
-                        /*fileWriter.append(",");
+                        fileWriter.append(",");
 
-                        fileWriter.append((file.getnAuth().get(0).toString()));*/
+                        /* fileWriter.append((file.getnAuth().get(0).toString()));
+                        fileWriter.append(",");
+
+                        fileWriter.append(file.getRevisions().get(0).toString());
+                        fileWriter.append(",");*/
+
+                        fileWriter.append(file.getTouchedLOCs().get(0).toString());
+
                         fileWriter.append("\n");
 
                         file.getPaths().remove(0);
                         file.getLOCs().remove(0);
                         file.getChurn().remove(0);
                         //file.getnAuth().remove(0);
+                        //file.getRevisions().remove(0);
+                        file.getTouchedLOCs().remove(0);
 
                         file.decAppearances();
                     }
@@ -217,9 +226,15 @@ public class FIlesRet {
                         files.get(ret).insertPath(treeWalk.getPathString());
                         files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
-                        //System.out.println("if: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
+                        // questo le salto per il momento perchè sono lentissime
                         //files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
-                        files.get(ret).insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+                        //files.get(ret).insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+                        if(releaseNumber > 1){
+                            files.get(ret).insertTouchedLOCs(locTouched(repository, relNames.get(releaseNumber-2), rel, treeWalk.getPathString()));
+                        }else{
+                            //è la prima release, quindi loc touched sono tutte le loc
+                            files.get(ret).insertTouchedLOCs(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
+                        }
 
                     } else {
                         //System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
@@ -229,8 +244,15 @@ public class FIlesRet {
                         rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         rf.insertChurn(0);
                         rf.setRevisionFirstAppearance(releaseNumber);
+                        // questo le salto per il momento perchè sono lentissime
                         //rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
-                        rf.insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+                        //rf.insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+                        if(releaseNumber > 1) {
+                            rf.insertTouchedLOCs(locTouched(repository, relNames.get(releaseNumber - 2), rel, treeWalk.getPathString()));
+                        }else{
+                            //è la prima release, quindi loc touched sono tutte le loc
+                            rf.insertTouchedLOCs(rf.getLOCs().get(0));
+                        }
                         files.add(rf);
                     }
                 }
@@ -336,15 +358,85 @@ public class FIlesRet {
             }
         }
 
-        System.out.println(c);
+        //System.out.println(c);
 
         return c;
     }
 
 
+
+    public static int locTouched(Repository repository, String startRel, String endRel, String fileName) throws GitAPIException, IOException {
+        RevWalk walk = new RevWalk(repository);
+        int res = 0;
+        // get the commit id
+        ObjectId startCommit = repository.resolve(startRel);
+        ObjectId endCommit = repository.resolve(endRel);
+
+        RevCommit start = walk.parseCommit(startCommit);
+        RevCommit end = walk.parseCommit(endCommit);
+
+        /*System.out.println("Start commit: " + start.abbreviate(6).name());
+        System.out.println("End commit: " + end.abbreviate(6).name());*/
+
+        // Obtain tree iterators to traverse the tree of the old/new commit
+        ObjectReader reader = repository.newObjectReader();
+        CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
+        oldTreeIter.reset(reader, start.getTree());
+        CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
+        newTreeIter.reset(reader, end.getTree());
+
+        // Use a DiffFormatter to compare new and old tree and return a list of changes
+        DiffFormatter diffFormatter = new DiffFormatter( DisabledOutputStream.INSTANCE );
+        diffFormatter.setRepository(repository);
+        diffFormatter.setContext(0);
+        List<DiffEntry> entries = diffFormatter.scan( oldTreeIter, newTreeIter );
+
+        // Print the contents of the DiffEntries
+        for( DiffEntry entry : entries ) {
+            if(!entry.getNewPath().equals(fileName))
+                continue;
+
+            //System.out.println(entry.getNewPath());
+            FileHeader fileHeader = diffFormatter.toFileHeader(entry);
+            ArrayList<Edit> edits = fileHeader.toEditList();
+            for (Edit e : edits) {
+
+                if (e.toString().contains("INSERT")){
+                    //System.out.println(e);
+                    int bB = e.getBeginB();
+                    int eB = e.getEndB();
+
+                    //System.out.println("touched: " + (eB-bB) + " locs");
+                    res += eB-bB;
+
+                }else if (e.toString().contains("DELETE")){
+                    //System.out.println(e);
+                    int eA = e.getEndA();
+                    int eB = e.getEndB();
+                    //System.out.println("touched: " + (eA-eB) + " locs");
+                    res += eA-eB;
+
+                }else { // e.toString().contains("REPLACE")
+                    //System.out.println(e);
+                    int bA = e.getBeginA();
+                    int eA = e.getEndA();
+                    int bB = e.getBeginB();
+                    int eB = e.getEndB();
+
+                    //System.out.println("touched: " + (eA-bA) + " " + (eB - bB));
+                    res += eA-bA;
+                }
+            }
+            break; //all the modifies have been controlled
+        }
+        //System.out.println("Total LOCs touched: " + res);
+        return res;
+    }
+
+
     public static void main(String[] args) throws IOException, GitAPIException {
-        FileRepositoryBuilder builder = new FileRepositoryBuilder();
         int relNum = 0;
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
                 .setGitDir(new File(repo_path)).readEnvironment()
                 .findGitDir().build();
@@ -353,7 +445,7 @@ public class FIlesRet {
         retrieveReleases();
 
 
-        /* per ogni release (tag) lista i file */
+        // per ogni release (tag) lista i file
         for(String releaseName : relNames) {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
@@ -367,5 +459,15 @@ public class FIlesRet {
         repository.close();
 
     }
+
+ /*   public static void main(String[] args) throws IOException, GitAPIException {
+        FileRepositoryBuilder builder = new FileRepositoryBuilder();
+        repository = builder
+                .setGitDir(new File(repo_path)).readEnvironment()
+                .findGitDir().build();
+
+        locTouched(repository, "refs/tags/syncope-1.2.3", "refs/tags/syncope-1.2.4", "deb/core/pom.xml");
+
+    }*/
 
 }
