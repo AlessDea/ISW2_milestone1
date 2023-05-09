@@ -1,14 +1,12 @@
 package com.mycompany.app;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.blame.BlameResult;
 import org.eclipse.jgit.diff.*;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
-import org.eclipse.jgit.patch.HunkHeader;
 import org.eclipse.jgit.revwalk.*;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
@@ -20,7 +18,6 @@ import java.io.*;
 import java.util.*;
 
 import static com.mycompany.app.getReleaseInfo.relNames;
-import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
@@ -32,6 +29,7 @@ public class FIlesRet {
     public static Repository repository;
 
     public static ArrayList<Release> releases = new ArrayList<>();
+
 
 
     /*
@@ -230,10 +228,13 @@ public class FIlesRet {
                         //files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
                         //files.get(ret).insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
                         if(releaseNumber > 1){
-                            files.get(ret).insertTouchedLOCs(locTouched(repository, relNames.get(releaseNumber-2), rel, treeWalk.getPathString()));
+                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber-2), rel, treeWalk.getPathString());
+                            files.get(ret).insertTouchedLOCs(r.get("touched"));
+                            files.get(ret).insertLOCAdded(r.get("added"));
                         }else{
-                            //è la prima release, quindi loc touched sono tutte le loc
+                            //è la prima release, quindi loc touched e anche le added sono tutte le loc
                             files.get(ret).insertTouchedLOCs(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
+                            files.get(ret).insertLOCAdded(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
                         }
 
                     } else {
@@ -248,10 +249,13 @@ public class FIlesRet {
                         //rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
                         //rf.insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
                         if(releaseNumber > 1) {
-                            rf.insertTouchedLOCs(locTouched(repository, relNames.get(releaseNumber - 2), rel, treeWalk.getPathString()));
+                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2), rel, treeWalk.getPathString());
+                            rf.insertTouchedLOCs(r.get("touched"));
+                            rf.insertLOCAdded(r.get("added"));
                         }else{
-                            //è la prima release, quindi loc touched sono tutte le loc
+                            //è la prima release, quindi loc touched e anche le added sono tutte le loc
                             rf.insertTouchedLOCs(rf.getLOCs().get(0));
+                            rf.insertLOCAdded(rf.getLOCs().get(0));
                         }
                         files.add(rf);
                     }
@@ -309,6 +313,9 @@ public class FIlesRet {
     }
 
 
+    /**
+     *
+     * */
     public static int countCommits(Repository repository, String file, String currentRelease) throws IOException, GitAPIException {
         RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
@@ -364,10 +371,22 @@ public class FIlesRet {
     }
 
 
-
-    public static int locTouched(Repository repository, String startRel, String endRel, String fileName) throws GitAPIException, IOException {
+    /**
+     * Returns:
+     * - the number of touched LOCs (added + removed)
+     * - the number of added LOCs
+     * These values are put in a Map which is returned.
+     * */
+    public static Map<String, Integer> locTouched(Repository repository, String startRel, String endRel, String fileName) throws GitAPIException, IOException {
         RevWalk walk = new RevWalk(repository);
-        int res = 0;
+        int LOCTouched = 0;
+        int LOCAdded = 0;
+        int bA;
+        int eA;
+        int bB;
+        int eB;
+        Map<String, Integer> ret = new HashMap<>();
+
         // get the commit id
         ObjectId startCommit = repository.resolve(startRel);
         ObjectId endCommit = repository.resolve(endRel);
@@ -375,8 +394,8 @@ public class FIlesRet {
         RevCommit start = walk.parseCommit(startCommit);
         RevCommit end = walk.parseCommit(endCommit);
 
-        /*System.out.println("Start commit: " + start.abbreviate(6).name());
-        System.out.println("End commit: " + end.abbreviate(6).name());*/
+        /*System.out.println("Start commit: " + start.getName() + " -> " + start.abbreviate(6).name());
+        System.out.println("End commit: " + end.getName() + " -> "+ end.abbreviate(6).name());*/
 
         // Obtain tree iterators to traverse the tree of the old/new commit
         ObjectReader reader = repository.newObjectReader();
@@ -396,45 +415,52 @@ public class FIlesRet {
             if(!entry.getNewPath().equals(fileName))
                 continue;
 
-            //System.out.println(entry.getNewPath());
+            System.out.println(entry.getNewPath());
+
             FileHeader fileHeader = diffFormatter.toFileHeader(entry);
             ArrayList<Edit> edits = fileHeader.toEditList();
+
+            int locsA = 0, locsD = 0; // mi servono per mantenere le LOCs added e deleted
             for (Edit e : edits) {
+                bA = e.getBeginA();
+                eA = e.getEndA();
+                bB = e.getBeginB();
+                eB = e.getEndB();
+
+                System.out.println(e);
 
                 if (e.toString().contains("INSERT")){
-                    //System.out.println(e);
-                    int bB = e.getBeginB();
-                    int eB = e.getEndB();
-
-                    //System.out.println("touched: " + (eB-bB) + " locs");
-                    res += eB-bB;
+                    locsA += eB-bB;
 
                 }else if (e.toString().contains("DELETE")){
-                    //System.out.println(e);
-                    int eA = e.getEndA();
-                    int eB = e.getEndB();
-                    //System.out.println("touched: " + (eA-eB) + " locs");
-                    res += eA-eB;
+                    locsD += eA-eB;
 
-                }else { // e.toString().contains("REPLACE")
-                    //System.out.println(e);
-                    int bA = e.getBeginA();
-                    int eA = e.getEndA();
-                    int bB = e.getBeginB();
-                    int eB = e.getEndB();
-
-                    //System.out.println("touched: " + (eA-bA) + " " + (eB - bB));
-                    res += eA-bA;
+                }else { //"REPLACE"
+                    if(eA < eB) {
+                        // es. A(26,27) B(26,29) -> added = (eB - eA) = 29 - 27 = 2 ; deleted = (eA - bA) = 27 - 26 = 1;
+                        locsA += (eB - eA); //righe aggiunte
+                        locsD += (eA - bA); //righe tolte
+                    }else{
+                        // es. A(26,29) B(26,27) -> (eA - eB) = 29 - 27 = 2
+                        locsD += (eA - eB);
+                    }
                 }
             }
-            break; //all the modifies have been controlled
+            LOCTouched += locsA + locsD;
+            LOCAdded += locsA;
+            break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quidni se si arriva qui quelle del file d'interesse sono state controllate tutte
+
         }
-        //System.out.println("Total LOCs touched: " + res);
-        return res;
+        //System.out.println("Total LOCs touched: " + resA - resD);
+
+        ret.put("touched", LOCTouched);
+        ret.put("added", LOCAdded);
+        return ret;
     }
 
 
-    public static void main(String[] args) throws IOException, GitAPIException {
+
+/*    public static void main(String[] args) throws IOException, GitAPIException {
         int relNum = 0;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
@@ -458,16 +484,16 @@ public class FIlesRet {
 
         repository.close();
 
-    }
+    }*/
 
- /*   public static void main(String[] args) throws IOException, GitAPIException {
+    public static void main(String[] args) throws IOException, GitAPIException {
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
                 .setGitDir(new File(repo_path)).readEnvironment()
                 .findGitDir().build();
 
-        locTouched(repository, "refs/tags/syncope-1.2.3", "refs/tags/syncope-1.2.4", "deb/core/pom.xml");
-
-    }*/
+        Map<String, Integer> r = locTouched(repository, "refs/tags/syncope-1.2.3", "refs/tags/syncope-1.2.4", "deb/core/pom.xml");
+        System.out.println("Touched: " + r.get("touched") + " Added: " + r.get("added"));
+    }
 
 }

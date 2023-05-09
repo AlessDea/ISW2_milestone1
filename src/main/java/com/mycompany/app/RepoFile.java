@@ -14,6 +14,7 @@ public class RepoFile
     private int revisionFirstAppearance;
     private ArrayList<Integer> nAuth;
     private ArrayList<Integer> revisions;
+    private ArrayList<Integer> LOCAdded;
 
 
     public RepoFile(String name) {
@@ -26,6 +27,7 @@ public class RepoFile
         this.churn = new ArrayList<>();
         this.nAuth = new ArrayList<>();
         this.revisions = new ArrayList<>();
+        this.LOCAdded = new ArrayList<>();
 
     }
 
@@ -133,4 +135,14 @@ public class RepoFile
     public void decAppearances() {
         this.appearances -= 1;
     }
+
+    public void insertLOCAdded(int LOCAdded) {
+        this.LOCAdded.add(LOCAdded);
+    }
+
+    public ArrayList<Integer> getLOCAdded() {
+        return LOCAdded;
+    }
+
+
 }
