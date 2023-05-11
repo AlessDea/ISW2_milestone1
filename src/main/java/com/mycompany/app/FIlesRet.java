@@ -14,16 +14,20 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
+
 import java.io.*;
 import java.util.*;
 
 import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
     public static ArrayList<RepoFile> files = new ArrayList<>();
-    public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git";
-    public static String projName = "SYNCOPE";
+    //public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git";
+    public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
+    //public static String projName = "SYNCOPE";
+    public static String projName = "BOOKKEEPER";
     public static List<Ref> branches = new ArrayList<>();
     public static List<Ref> tags = new ArrayList<>();
     public static Repository repository;
@@ -69,10 +73,10 @@ public class FIlesRet {
         for(Release r : releases){
             tags.add(r.getRef()); //li inserisco in tag in modo ordinato
 
-            *//*int year = r.getDate().get(Calendar.YEAR);
+            int year = r.getDate().get(Calendar.YEAR);
             int month = r.getDate().get(Calendar.MONTH) + 1;
             int day = r.getDate().get(Calendar.DAY_OF_MONTH);
-            System.out.println("Date: " + day + "/" + month + "/"+ year);*//*
+            System.out.println("Date: " + day + "/" + month + "/"+ year);
         }
 
 
@@ -138,11 +142,11 @@ public class FIlesRet {
                         fileWriter.append((Integer.toString(i - file.getRevisionFirstAppearance() + 1)));
                         fileWriter.append(",");
 
-                        /* fileWriter.append((file.getnAuth().get(0).toString()));
+                        fileWriter.append((file.getnAuth().get(0).toString()));
                         fileWriter.append(",");
 
                         fileWriter.append(file.getRevisions().get(0).toString());
-                        fileWriter.append(",");*/
+                        fileWriter.append(",");
 
                         fileWriter.append(file.getTouchedLOCs().get(0).toString());
 
@@ -151,8 +155,8 @@ public class FIlesRet {
                         file.getPaths().remove(0);
                         file.getLOCs().remove(0);
                         file.getChurn().remove(0);
-                        //file.getnAuth().remove(0);
-                        //file.getRevisions().remove(0);
+                        file.getnAuth().remove(0);
+                        file.getRevisions().remove(0);
                         file.getTouchedLOCs().remove(0);
 
                         file.decAppearances();
@@ -189,7 +193,12 @@ public class FIlesRet {
     }
 
     public static void listRepositoryContents(String rel, int releaseNumber) throws IOException, GitAPIException {
+
+        System.out.println(rel);
+
         ObjectId head = repository.resolve(rel);
+        if(head == null) //TODO: controlla cosa fare qua, perchè la seconda release torna null
+            return;
 
         //System.out.println(head.getName());
         // a RevWalk allows to walk over commits based on some filtering that is defined
@@ -224,14 +233,20 @@ public class FIlesRet {
                         files.get(ret).insertPath(treeWalk.getPathString());
                         files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
-                        // questo le salto per il momento perchè sono lentissime
-                        //files.get(ret).insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
-                        //files.get(ret).insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+
                         if(releaseNumber > 1){
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2));
+                            files.get(ret).insertAuth(ar.get("authors"));
+                            files.get(ret).insertRevisions(ar.get("revisions"));
+
                             Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber-2), rel, treeWalk.getPathString());
                             files.get(ret).insertTouchedLOCs(r.get("touched"));
                             files.get(ret).insertLOCAdded(r.get("added"));
                         }else{
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, null);
+                            files.get(ret).insertAuth(ar.get("authors"));
+                            files.get(ret).insertRevisions(ar.get("revisions"));
+
                             //è la prima release, quindi loc touched e anche le added sono tutte le loc
                             files.get(ret).insertTouchedLOCs(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
                             files.get(ret).insertLOCAdded(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
@@ -245,14 +260,20 @@ public class FIlesRet {
                         rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         rf.insertChurn(0);
                         rf.setRevisionFirstAppearance(releaseNumber);
-                        // questo le salto per il momento perchè sono lentissime
-                        //rf.insertAuth(countAuthorsInFile(treeWalk.getPathString(), relNames.get(releaseNumber-1)));
-                        //rf.insertRevisions(countCommits(repository, treeWalk.getPathString(), rel));
+
                         if(releaseNumber > 1) {
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2));
+                            rf.insertAuth(ar.get("authors"));
+                            rf.insertRevisions(ar.get("revisions"));
+
                             Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2), rel, treeWalk.getPathString());
                             rf.insertTouchedLOCs(r.get("touched"));
                             rf.insertLOCAdded(r.get("added"));
                         }else{
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, null);
+                            rf.insertAuth(ar.get("authors"));
+                            rf.insertRevisions(ar.get("revisions"));
+
                             //è la prima release, quindi loc touched e anche le added sono tutte le loc
                             rf.insertTouchedLOCs(rf.getLOCs().get(0));
                             rf.insertLOCAdded(rf.getLOCs().get(0));
@@ -264,7 +285,9 @@ public class FIlesRet {
         }
     }
 
-
+    /**
+     *
+     * */
     public static int countLOCs(String filePath, String release) throws IOException, GitAPIException {
         RevWalk walk = new RevWalk(repository);
         ObjectId headId = repository.resolve(release);
@@ -289,12 +312,14 @@ public class FIlesRet {
         return lines;
     }
 
-
-    public static int countAuthorsInFile(String filePath, String toCommit) throws IOException, GitAPIException {
+    /**
+     * TODO: devi farlo fra due release poichè se glie ne passi una sola prende tutti i commit fino a quel punto (partendo dal primo di sempre)
+     * */
+    public static int countAuthorsInFile(String filePath, String currentRel) throws IOException, GitAPIException {
         int authorsCount = 0;
 
 
-        ObjectId to = repository.resolve(toCommit); //resolve the commit id from the tag name
+        ObjectId to = repository.resolve(currentRel); //resolve the commit id from the tag name
 
 
         BlameResult blameResult = new Git(repository).blame()
@@ -304,6 +329,7 @@ public class FIlesRet {
 
         Set<String> authors = new HashSet<>();
         for (int i = 0; i < blameResult.getResultContents().size(); i++) {
+
             authors.add(blameResult.getSourceAuthor(i).getName());
             //System.out.println(blameResult.getSourceAuthor(i).getName());
         }
@@ -313,25 +339,105 @@ public class FIlesRet {
     }
 
 
+    public static Map<String, Integer> countAuthAndRevs(Repository repository, String file, String currentRelease, String prevRelease) throws IOException, GitAPIException {
+        RevWalk walk = new RevWalk(repository);
+        Git git = new Git(repository);
+        int nAuth = 0;
+        int nComm = 0;
+        ArrayList<String> authors = new ArrayList<>();
+        Map<String, Integer> ret = new HashMap<>();
+
+        LogCommand log;
+
+        ObjectId objcurId;
+        ObjectId objprevId = null;
+        RevCommit curRelCommit;
+        RevCommit prevRelCommit = null;
+
+
+        // prendi gli object id delle release
+        objcurId = repository.resolve(currentRelease);
+        if(prevRelease != null) {
+            objprevId = repository.resolve(prevRelease);
+        }
+
+        curRelCommit = walk.parseCommit(objcurId);
+        if(objprevId != null){
+            prevRelCommit = walk.parseCommit(objprevId);
+        }
+
+        if(prevRelCommit != null) {
+            log = git.log().addRange(prevRelCommit, curRelCommit);
+        }else{
+            log = git.log().add(curRelCommit);
+        }
+
+        Iterable<RevCommit> commits = log.addPath(file).call();
+
+        ArrayList<RevCommit> relCommits = new ArrayList<>();
+        for(RevCommit commit : commits){
+            relCommits.add(commit);
+        }
+
+        for(RevCommit com : relCommits){
+
+            nComm++; //conto i commit che toccano il mio file
+
+            if(!authors.contains(com.getAuthorIdent().getName())) {
+                nAuth++; //conto gli autori che hanno toccato il file
+                authors.add(com.getAuthorIdent().getName());
+            }
+
+        }
+        //System.out.println("Authors: " + nAuth + " Revisions: " + nComm);
+        ret.put("authors", nAuth);
+        ret.put("revisions", nComm);
+        return ret;
+    }
+
+
+
     /**
+     * devi farlo fra due release poichè se glie ne passi una sola prende tutti i commit fino a quel punto (partendo dal primo di sempre) --> DONE
      *
      * */
-    public static int countCommits(Repository repository, String file, String currentRelease) throws IOException, GitAPIException {
+    public static int countCommits(Repository repository, String file, String currentRelease, String prevRelease) throws IOException, GitAPIException {
         RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
         int c = 0;
+
+        LogCommand log;
+
+        ObjectId objcurId = null;
+        ObjectId objprevId = null;
+        RevCommit curRelCommit = null;
+        RevCommit prevRelCommit = null;
 
         ObjectReader reader = repository.newObjectReader();
         CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
         CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
 
         // prendi gli object id delle release
-        ObjectId objNewId = repository.resolve(currentRelease);
+        objcurId = repository.resolve(currentRelease);
+        if(prevRelease != null) {
+            objprevId = repository.resolve(prevRelease);
+        }
 
-        RevCommit curRelCommit = walk.parseCommit(objNewId);
+        curRelCommit = walk.parseCommit(objcurId);
+        if(objprevId != null){
+            prevRelCommit = walk.parseCommit(objprevId);
+        }
+
+
 
         // fai il log dell'ultima release e prendi tutti i commit
-        LogCommand log = git.log().add(curRelCommit);
+        //LogCommand log = git.log().add(curRelCommit);
+
+        if(prevRelCommit != null) {
+            log = git.log().addRange(prevRelCommit, curRelCommit);
+        }else{
+            log = git.log().add(curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine.
+        }
 
         Iterable<RevCommit> commits = log.call();
 
@@ -340,10 +446,11 @@ public class FIlesRet {
             relCommits.add(com);
         }
 
-
         for(RevCommit commit : relCommits) {
+
             if(relCommits.indexOf(commit) == relCommits.size()-1)
                 break;
+
 
             RevTree tree1 = commit.getTree();
             newTreeIter.reset(reader, tree1);
@@ -377,6 +484,8 @@ public class FIlesRet {
      * - the number of added LOCs
      * These values are put in a Map which is returned.
      * */
+
+    /* OK */
     public static Map<String, Integer> locTouched(Repository repository, String startRel, String endRel, String fileName) throws GitAPIException, IOException {
         RevWalk walk = new RevWalk(repository);
         int LOCTouched = 0;
@@ -415,10 +524,11 @@ public class FIlesRet {
             if(!entry.getNewPath().equals(fileName))
                 continue;
 
-            System.out.println(entry.getNewPath());
+            //System.out.println(entry.getNewPath());
 
             FileHeader fileHeader = diffFormatter.toFileHeader(entry);
             ArrayList<Edit> edits = fileHeader.toEditList();
+
 
             int locsA = 0, locsD = 0; // mi servono per mantenere le LOCs added e deleted
             for (Edit e : edits) {
@@ -427,7 +537,7 @@ public class FIlesRet {
                 bB = e.getBeginB();
                 eB = e.getEndB();
 
-                System.out.println(e);
+                //System.out.println(e);
 
                 if (e.toString().contains("INSERT")){
                     locsA += eB-bB;
@@ -460,7 +570,7 @@ public class FIlesRet {
 
 
 
-/*    public static void main(String[] args) throws IOException, GitAPIException {
+    public static void main(String[] args) throws IOException, GitAPIException {
         int relNum = 0;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
@@ -469,6 +579,9 @@ public class FIlesRet {
 
 
         retrieveReleases();
+
+
+        long start = System.currentTimeMillis();
 
 
         // per ogni release (tag) lista i file
@@ -481,19 +594,21 @@ public class FIlesRet {
         // Scrivi il file
         writeOnFile();
 
+        long end = System.currentTimeMillis();
+
+        System.out.println("Elapsed time: " + (end - start)/1000.2f);
 
         repository.close();
 
-    }*/
+    }
 
-    public static void main(String[] args) throws IOException, GitAPIException {
+    /*public static void main(String[] args) throws IOException, GitAPIException {
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
                 .setGitDir(new File(repo_path)).readEnvironment()
                 .findGitDir().build();
 
-        Map<String, Integer> r = locTouched(repository, "refs/tags/syncope-1.2.3", "refs/tags/syncope-1.2.4", "deb/core/pom.xml");
-        System.out.println("Touched: " + r.get("touched") + " Added: " + r.get("added"));
-    }
+        //retrieveTags();
+    }*/
 
 }
