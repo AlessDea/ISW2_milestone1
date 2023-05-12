@@ -2,49 +2,57 @@ package com.mycompany.app;
 
 import java.util.ArrayList;
 
+import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.getReleaseInfo.releasesInfo;
+
 /**
  * Ticket per un determinato Bug
  */
 public class Tickets {
     private String name;
-    private String fixedRelease;
-    private String iv;
-    private String fv;
+    private Version iv;
+    private Version fv;
+    private Version ov;
     private String commitId;
-    private ArrayList<String> affectedVersions; /* nome di tutte le versioni affette dal bug */
+    private ArrayList<Version> affectedVersions; /* nome di tutte le versioni affette dal bug */
 
     /* in caso non fosse presente IV allora bisogna applicare proportion per calcolarselo */
 
-    public Tickets(String name, String fixedRelease, String iv, String fv, ArrayList<String> releases) {
+
+    //releases should be relNames but for make the class independent of the entire project, I prefer to pass it as argument
+    public Tickets(String name, Version iv, Version fv, Version ov, ArrayList<Version> releases) {
         this.name = name;
-        this.fixedRelease = fixedRelease;
         this.iv = iv;
         this.fv = fv;
+        this.ov = ov;
+        this.affectedVersions = new ArrayList<>();
+        this.affectedVersions = (ArrayList<Version>) releases.subList(releases.indexOf(iv), releases.indexOf(fv));
+    }
+
+    //TODO: implements proportion
+    public Tickets(String name, Version fv, Version ov) {
+        this.name = name;
+        this.fv = fv;
+        this.ov = ov;
         this.affectedVersions = new ArrayList<>();
 
-        /* inizializzo l'array delle affected version
-        * ad iv e fv bisogna anteporgli 'refs/tags/syncope' oppure refs/tags/release' a seconda del progetto
-        * */
-        int i = releases.indexOf(iv);
-        int size = releases.indexOf(fv) - i;
-        for(; i < size; i++){
-            this.affectedVersions.add(releases.get(i));
-        }
+        /* inizializzo l'array delle affected version: non ho l'injected version quindi bisogna usare proportion*/
+
+        /* ... Proportion ... */
+
+
     }
 
     public String getName() {
         return name;
     }
 
-    public String getFixedRelease() {
-        return fixedRelease;
-    }
 
-    public String getIv() {
+    public Version getIv() {
         return iv;
     }
 
-    public String getFv() {
+    public Version getFv() {
         return fv;
     }
 
@@ -52,7 +60,7 @@ public class Tickets {
         return commitId;
     }
 
-    public ArrayList<String> getAffectedVersions() {
+    public ArrayList<Version> getAffectedVersions() {
         return affectedVersions;
     }
 
@@ -60,15 +68,11 @@ public class Tickets {
         this.name = name;
     }
 
-    public void setFixedRelease(String fixedRelease) {
-        this.fixedRelease = fixedRelease;
-    }
-
-    public void setIv(String iv) {
+    public void setIv(Version iv) {
         this.iv = iv;
     }
 
-    public void setFv(String fv) {
+    public void setFv(Version fv) {
         this.fv = fv;
     }
 
@@ -76,7 +80,7 @@ public class Tickets {
         this.commitId = commitId;
     }
 
-    public void setAffectedVersions(ArrayList<String> affectedVersions) {
+    public void setAffectedVersions(ArrayList<Version> affectedVersions) {
         this.affectedVersions = affectedVersions;
     }
 }

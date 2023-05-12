@@ -17,6 +17,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="/QPIDVersionInfo.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/SYNCOPEFilesInfo.csv">
           <value>
             <Attribute>

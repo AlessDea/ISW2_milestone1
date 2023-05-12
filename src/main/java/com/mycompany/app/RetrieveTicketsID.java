@@ -7,10 +7,13 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.security.PublicKey;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.getReleaseInfo.retrieveReleases;
+
 
 public class RetrieveTicketsID {
 
@@ -65,9 +68,69 @@ public class RetrieveTicketsID {
     }
 
 
+    public static Version getTheOpeningVerName(LocalDateTime d){
+
+        //check if it is the first one
+        if(d.isBefore(relNames.get(0).getDate()) || d.isEqual(relNames.get(0).getDate())){
+            //It's the first release
+            return relNames.get(0);
+        }
+
+        //iterate in couple the releases and check if the date of the opening version is between the two considered.
+        for(int i = 0; i < relNames.size() - 1; i++) {
+            if(d.isAfter(relNames.get(i).getDate()) && d.isBefore(relNames.get(i + 1).getDate())){
+                //se è compresa fra queste due vuol dire che è la seconda
+                return relNames.get(i+1);
+            }
+        }
+
+        //it this case it must be the last one
+        return relNames.get(relNames.size()-1);
+
+    }
+
+    public static Version getTheInjectedVer(ArrayList<Version> ivs){
+        ivs.sort(new Comparator<Version>() {
+            @Override
+            public int compare(Version o1, Version o2) {
+                return o1.compare(o2);
+            }
+        });
+
+        for(Version v : relNames) {
+            //faccio così perchè in questo modo ho proprio l'oggetto versione presente in relNames ed è più facile calcolarmi le affected versions
+            if (v.getExtendedName().equals(ivs.get(0).getExtendedName())) //ivs.get(0)  ->  la prima sarà la più vecchia
+                return v;
+        }
+
+        //in caso non la trova c'è qualche problema grosso
+        return null;
+    }
+
+
+    public static Version getTheFixedVer(ArrayList<Version> ivs){
+        ivs.sort(new Comparator<Version>() {
+            @Override
+            public int compare(Version o1, Version o2) {
+                return o1.compare(o2);
+            }
+        });
+
+        for(Version v : relNames) {
+            //faccio così perchè in questo modo ho proprio l'oggetto versione presente in relNames ed è più facile calcolarmi le affected versions
+            if (v.getExtendedName().equals(ivs.get(ivs.size() - 1).getExtendedName())) //ivs.size() - 1  ->  l'ultima sarà la più nuova, e quindi l'ultima in cui è stata fixata
+                return v;
+        }
+
+        //in caso non la trova c'è qualche problema grosso
+        return null;
+    }
+
 
     public static void retrieveTickets(String projName) throws IOException, JSONException {
-
+        Version iv;
+        Version fv;
+        Version ov;
         Integer j = 0, i = 0, total = 1;
         //Get JSON API for closed bugs w/ AV in the project
         do {
@@ -75,43 +138,93 @@ public class RetrieveTicketsID {
             j = i + 1000;
             String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=%22"
                     + projName + "%22AND%22issueType%22=%22Bug%22AND(%22status%22=%22closed%22OR"
-                    + "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22&fields=key,resolutiondate,versions,created&startAt="
+                    + "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22&fields=key,resolutiondate,versions,created,fixVersions&startAt="
                     + i.toString() + "&maxResults=" + j.toString();
             JSONObject json = readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
 
-            /*for(Object o : issues)
-                System.out.println(o);*/
+            for(Object o : issues)
+                System.out.println(o);
 
             total = json.getInt("total");
             for (; i < total && i < j; i++) {
                 //Iterate through each bug
-                String key = issues.getJSONObject(i % 1000).get("key").toString();
-                JSONObject fields = (JSONObject) issues.getJSONObject(i%1000).get("fields");
-                JSONArray versions = fields.getJSONArray("versions");
-                String resDate = fields.get("resolutiondate").toString();
-                String created = fields.get("created").toString();
+                JSONObject row = issues.getJSONObject(i%1000);
+                String key = row.get("key").toString();
 
-                //System.out.println(fields);
-                String release = null;
+                JSONObject fields = (JSONObject) row.get("fields");
+                LocalDateTime resDate = LocalDateTime.parse(fields.get("resolutiondate").toString().split(".")[0]); //non mi serve
+                LocalDateTime ovDate = LocalDateTime.parse(fields.get("created").toString().split(".")[0]); //opening version date
+
+
+                //prendi le opening versions
+                JSONArray injVer = fields.getJSONArray("versions");
+                ArrayList<Version> injectedVersions = new ArrayList<>();
                 try {
-                    release = versions.getJSONObject(0).get("name").toString();
+                    for(int z = 0; z < injVer.length(); z++){
+                        String name = injVer.getJSONObject(z).get("name").toString();
+                        LocalDateTime date = LocalDateTime.parse(injVer.getJSONObject(z).get("releaseDate").toString());
+                        Version v = new Version(name, date);
+                        injectedVersions.add(v);
+                    }
                 } catch (JSONException e) {
-                    // alcuni ticket non hanno la release associata
                     continue;
                 }
 
-                tickets.add(new Tickets(key, release, created, resDate, (ArrayList<String>) relNames)); // non è giusto, ho bisogno del nome delle release invece che della data
-                System.out.println(key + ":\t" + release + "\t\t" + created + "\t" + resDate);
+
+
+                JSONArray fixVer = fields.getJSONArray("fixVersions");
+                ArrayList<Version> fixedVersions = new ArrayList<>();
+                try {
+                    for(int z = 0; z < fixVer.length(); z++){
+                        String name = fixVer.getJSONObject(z).get("name").toString();
+                        LocalDateTime date = LocalDateTime.parse(fixVer.getJSONObject(z).get("releaseDate").toString());
+                        Version v = new Version(name, date);
+                        fixedVersions.add(v);
+                    }
+                } catch (JSONException e) {
+                    continue;
+                }
+
+                /* conoscendo la data della opening devo prendermi il nome della release corrispondente */
+                ov = getTheOpeningVerName(ovDate);
+
+                /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
+                * devo prendere la più piccola delle injected e la più grande delle fixed.
+                * */
+                if(injectedVersions.size() < 1) {
+                    iv = null; //non c'è la injected, bisognerà usare proportion
+                }else {
+                    //devo prendere la più vecchia
+                    iv = getTheInjectedVer(injectedVersions);
+                }
+                fv = getTheFixedVer(fixedVersions);
+
+                if(fv == null){
+                    //without the fixed version the ticket is useless
+                    continue;
+                }
+
+                Tickets newTicket;
+                if(iv != null){
+                    newTicket = new Tickets(key, iv, fv, ov, (ArrayList<Version>) relNames);
+                } else{
+                    newTicket = new Tickets(key, fv, ov);
+                }
+
+                tickets.add(newTicket);
+
+                /*System.out.println(key + ":\t" + "\t\t" + created + "\t" + resDate);
+                System.out.println("\t\tAffected versions" + injVerNames);
+                System.out.println("\t\tFixed versions" + fixVerNames);*/
             }
         } while (i < total);
 
         //Bisogna togliere quelli della seconda metà delle release
     }
 
-   /* public static void main(String[] argv) throws IOException {
+    public static void main(String[] argv) throws IOException {
         retrieveTickets("BOOKKEEPER");
     }
-*/
 
 }

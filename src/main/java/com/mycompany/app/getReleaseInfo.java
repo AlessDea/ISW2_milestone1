@@ -24,9 +24,10 @@ public class getReleaseInfo {
 
     public static HashMap<LocalDateTime, String> releaseNames;
     public static HashMap<LocalDateTime, String> releaseID;
+    public static HashMap<String, LocalDateTime> releasesInfo;
     public static ArrayList<LocalDateTime> jiraReleases;
     public static Integer numVersions;
-    public static List<String> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
+    public static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
     public static Repository repository;
     public static ArrayList<String> gitReleases = new ArrayList<>();
 
@@ -116,7 +117,8 @@ public class getReleaseInfo {
         /* toglie le release che non si trovano su git */
         for(String rel : tmp){
             if(gitReleases.contains(rel)) {
-                relNames.add(rel); //non c'è su git quindi la cancello
+                Version v = new Version(rel, releasesInfo.get(rel));
+                relNames.add(v); //non c'è su git quindi la cancello
             }
         }
         System.out.println(relNames);
@@ -135,8 +137,10 @@ public class getReleaseInfo {
     public static void addRelease(String strDate, String name, String id) {
         LocalDate date = LocalDate.parse(strDate);
         LocalDateTime dateTime = date.atStartOfDay();
-        if (!jiraReleases.contains(dateTime))
+        if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
+            releasesInfo.put(name, dateTime);
+        }
         releaseNames.put(dateTime, name);
         releaseID.put(dateTime, id);
         return;

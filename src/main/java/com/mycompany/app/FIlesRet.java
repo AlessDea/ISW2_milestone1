@@ -63,7 +63,7 @@ public class FIlesRet {
                         fileWriter.append(",");
 
                         //version name
-                        fileWriter.append(relNames.get(i));
+                        fileWriter.append(relNames.get(i).getExtendedName());
                         fileWriter.append(",");
 
                         //class path
@@ -161,7 +161,7 @@ public class FIlesRet {
         System.out.println(rel);
 
         ObjectId head = repository.resolve(rel);
-        if(head == null) //TODO: controlla cosa fare qua, perchè la seconda release torna null
+        if(head == null)
             return;
 
         //System.out.println(head.getName());
@@ -199,11 +199,11 @@ public class FIlesRet {
                         files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
 
                         if(releaseNumber > 1){
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2));
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2).getExtendedName());
                             files.get(ret).insertAuth(ar.get("authors"));
                             files.get(ret).insertRevisions(ar.get("revisions"));
 
-                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber-2), rel, treeWalk.getPathString());
+                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber-2).getExtendedName(), rel, treeWalk.getPathString());
                             files.get(ret).insertTouchedLOCs(r.get("touched"));
                             files.get(ret).insertLOCAdded(r.get("added"));
                         }else{
@@ -228,11 +228,11 @@ public class FIlesRet {
 
 
                         if(releaseNumber > 1) {
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2));
+                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2).getExtendedName());
                             rf.insertAuth(ar.get("authors"));
                             rf.insertRevisions(ar.get("revisions"));
 
-                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2), rel, treeWalk.getPathString());
+                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel, treeWalk.getPathString());
                             rf.insertTouchedLOCs(r.get("touched"));
                             rf.insertLOCAdded(r.get("added"));
                         }else{
@@ -523,8 +523,8 @@ public class FIlesRet {
                     * all'affected versions presenti in t */
                     ArrayList<String> fileRels = f.getReleases();
                     for(Tickets t : bugs){
-                        int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
-                        int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size()-1)) + 1;
+                        int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0).getExtendedName());
+                        int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size()-1).getExtendedName()) + 1;
                         for(int i = firstAffRel; i < lastAffRel; i++){
                             f.getBuggy().set(i, true);
                         }
@@ -581,21 +581,21 @@ public class FIlesRet {
 
 
         // per ogni release (tag) lista i file
-        for(String releaseName : relNames) {
+        for(Version releaseName : relNames) {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
-            listRepositoryContents(releaseName, relNum); // calcola le metriche
+            listRepositoryContents(releaseName.getExtendedName(), relNum); // calcola le metriche
         }
 
         // calcola e setta la buggyness
         retrieveTickets(projName);
         retrieveTicketsFromCommit(repository);
-        for (String rel : relNames){    //TODO: a checkIfBuggy gli devo passare il nome del file, ma il file può avere differenti nomi (paths)...
+        for (Version rel : relNames){    //TODO: a checkIfBuggy gli devo passare il nome del file, ma il file può avere differenti nomi (paths)...
             for(RepoFile f : files){
                 if(relNames.indexOf(rel) == 0)
-                    ret = checkIfBuggy(repository, rel, null, f);
+                    ret = checkIfBuggy(repository, rel.getExtendedName(), null, f);
                 else
-                    ret = checkIfBuggy(repository, rel, relNames.get(relNames.indexOf(rel) - 1), f);
+                    ret = checkIfBuggy(repository, rel.getExtendedName(), relNames.get(relNames.indexOf(rel) - 1).getExtendedName(), f);
 
                 f.insertnFix(ret);
                 // la buggyness viene direttamente settata da checkIfBuggy
