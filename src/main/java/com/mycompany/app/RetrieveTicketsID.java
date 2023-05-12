@@ -7,9 +7,14 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.security.PublicKey;
+import java.util.ArrayList;
+
+import static com.mycompany.app.getReleaseInfo.relNames;
 
 public class RetrieveTicketsID {
 
+    public static ArrayList<Tickets> tickets = new ArrayList<>();
 
     private static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -44,10 +49,25 @@ public class RetrieveTicketsID {
         }
     }
 
+    /**
+    * Per calcolare l'IV c'è bisogno di calcolare la Proportion, questa può essere fatta in tre modi:
+     * - cold start: usando dati di altri progetti
+     * - increment
+     * - moving window
+    * */
+    public static int proportion(int ov, int fv){
+        int iv;
+        int prop = 0;
+        //prop = prop_cold_start(); // = (fv - iv)/(fv - ov);
+        iv = fv - (fv - ov) * prop;
 
-    public static void main(String[] args) throws IOException, JSONException {
+        return iv;
+    }
 
-        String projName = "SYNCOPE";
+
+
+    public static void retrieveTickets(String projName) throws IOException, JSONException {
+
         Integer j = 0, i = 0, total = 1;
         //Get JSON API for closed bugs w/ AV in the project
         do {
@@ -59,14 +79,39 @@ public class RetrieveTicketsID {
                     + i.toString() + "&maxResults=" + j.toString();
             JSONObject json = readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
+
+            /*for(Object o : issues)
+                System.out.println(o);*/
+
             total = json.getInt("total");
             for (; i < total && i < j; i++) {
                 //Iterate through each bug
                 String key = issues.getJSONObject(i % 1000).get("key").toString();
-                System.out.println(key);
+                JSONObject fields = (JSONObject) issues.getJSONObject(i%1000).get("fields");
+                JSONArray versions = fields.getJSONArray("versions");
+                String resDate = fields.get("resolutiondate").toString();
+                String created = fields.get("created").toString();
+
+                //System.out.println(fields);
+                String release = null;
+                try {
+                    release = versions.getJSONObject(0).get("name").toString();
+                } catch (JSONException e) {
+                    // alcuni ticket non hanno la release associata
+                    continue;
+                }
+
+                tickets.add(new Tickets(key, release, created, resDate, (ArrayList<String>) relNames)); // non è giusto, ho bisogno del nome delle release invece che della data
+                System.out.println(key + ":\t" + release + "\t\t" + created + "\t" + resDate);
             }
         } while (i < total);
+
+        //Bisogna togliere quelli della seconda metà delle release
     }
 
+   /* public static void main(String[] argv) throws IOException {
+        retrieveTickets("BOOKKEEPER");
+    }
+*/
 
 }

@@ -13,8 +13,11 @@ public class RepoFile
     private ArrayList<Integer> churn; /* between two release : |added - deleted| -> questo può essere fatto facendo la differenza tra i LOC delle release da verificare*/
     private int revisionFirstAppearance;
     private ArrayList<Integer> nAuth;
-    private ArrayList<Integer> revisions;
+    private ArrayList<Integer> revisions; //number of revisions
     private ArrayList<Integer> LOCAdded;
+    private ArrayList<Boolean> buggy;
+    private ArrayList<Integer> nFix; // number of fix in each release
+    private ArrayList<Integer> weightedAge; //Age of release wighted by LoC touched
 
 
     public RepoFile(String name) {
@@ -28,6 +31,8 @@ public class RepoFile
         this.nAuth = new ArrayList<>();
         this.revisions = new ArrayList<>();
         this.LOCAdded = new ArrayList<>();
+        this.buggy = new ArrayList<>();
+        this.weightedAge = new ArrayList<>();
 
     }
 
@@ -48,6 +53,7 @@ public class RepoFile
 
     public void insertRelease(String release) {
         this.releases.add(release);
+        this.buggy.add(false); // all'inizio le considero tutte non buggy
     }
 
     public ArrayList<String> getReleases() {
@@ -144,5 +150,27 @@ public class RepoFile
         return LOCAdded;
     }
 
+    public ArrayList<Boolean> getBuggy() {
+        return buggy;
+    }
 
+    public void insertBuggy(Boolean buggy) {
+        this.buggy.add(buggy);
+    }
+
+    public ArrayList<Integer> getnFix() {
+        return nFix;
+    }
+
+    public void insertnFix(int nFix) {
+        this.nFix.add(nFix);
+    }
+
+    public ArrayList<Integer> getWeightedAge() {
+        return weightedAge;
+    }
+
+    public void insertWeightedAge(int curRel) {
+        this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(curRel-1));
+    }
 }

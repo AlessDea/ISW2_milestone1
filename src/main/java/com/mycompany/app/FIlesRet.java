@@ -18,6 +18,8 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import java.io.*;
 import java.util.*;
 
+import static com.mycompany.app.RetrieveTicketsID.retrieveTickets;
+import static com.mycompany.app.RetrieveTicketsID.tickets;
 import static com.mycompany.app.getReleaseInfo.relNames;
 import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
@@ -34,78 +36,10 @@ public class FIlesRet {
 
     public static ArrayList<Release> releases = new ArrayList<>();
 
+    public static TicketList<Tickets> buggyRelCommits = new TicketList<>();
 
+    public static RevCommit theOldestCommit;
 
-    /*
-    * Le release sono quelle i cui commit hanno un tag. Notare che quelli validi sono quelli dalla release 1.2.1, quelli
-    * precedenti non fanno parte della repository principale ma di un fork probabilmente.
-    *
-    * */
-    /*public static void retrieveTags() throws GitAPIException, IOException {
-        Git jGit = new Git(repository);
-        int len;
-        List<Ref> call = jGit.tagList().call();
-
-        RevWalk walk = new RevWalk(repository);
-
-        for (Ref ref : call) {
-            RevCommit commit = repository.parseCommit(ref.getObjectId());
-
-            //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
-
-            RevTag tag = walk.parseTag(ref.getObjectId());
-
-            Calendar calendar = new GregorianCalendar();
-            calendar.setTimeInMillis(tag.getTaggerIdent().getWhen().getTime());
-
-            releases.add(new Release(ref, calendar));
-
-
-        }
-
-        releases.sort(new Comparator<Release>() {
-            @Override
-            public int compare(Release o1, Release o2) {
-                return o1.getDate().getTime().compareTo(o2.getDate().getTime());
-            }
-        });
-
-        for(Release r : releases){
-            tags.add(r.getRef()); //li inserisco in tag in modo ordinato
-
-            int year = r.getDate().get(Calendar.YEAR);
-            int month = r.getDate().get(Calendar.MONTH) + 1;
-            int day = r.getDate().get(Calendar.DAY_OF_MONTH);
-            System.out.println("Date: " + day + "/" + month + "/"+ year);
-        }
-
-
-        // scarta l'ultimo 50% delle release
-        len = tags.size();
-        System.out.println(len);
-        for(int i =  len - 1; i > len/2; i--){
-            tags.remove(i);
-            releases.remove(i);
-        }
-    }*/
-
-
-    /*
-    * Una volta prese tutte le release vado a vedere a quei commit tutti i cambiamenti fatti ad ogni file
-    * */
-    /*public static List<Ref> retrieveBranches() throws GitAPIException {
-        Git jGit = new Git(repository);
-        List<Ref> call = jGit.branchList().setListMode(ListBranchCommand.ListMode.ALL).call();
-        int n = 0;
-        for (Ref ref : call) {
-            if(!ref.getName().contains("HEAD") && !ref.getName().contains("master")){
-                System.out.println("Branch: " + ref.getName() + " " + ref.getObjectId().getName());
-                n++;
-            }
-        }
-        System.out.println(n);
-        return call;
-    }*/
 
 
     public static void writeOnFile(){
@@ -116,48 +50,78 @@ public class FIlesRet {
             String outname = projName + "FilesInfo.csv";
             //Name of CSV for output
             fileWriter = new FileWriter(outname);
-            fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Number of Authors, Revisions, LOC Touched");
+            fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Weighted Age, Number of Authors, Revisions, LOC Touched, LOC Added, Number of Fix, Buggy");
             fileWriter.append("\n");
             numVersions = relNames.size();
             for (int i = 0; i < numVersions; i++) {
 
                 for (RepoFile file : files) {
-
+                    /* viene fatta l'assunzione che un file compaia solo in modo sequenziale e non ci sia una sua assenza (un buco) tra release */
                     if ((i >= file.getRevisionFirstAppearance() - 1) && (file.getAppearances() > 0)) {
+                        //versione number
                         fileWriter.append(Integer.toString(i+1));
                         fileWriter.append(",");
 
+                        //version name
                         fileWriter.append(relNames.get(i));
                         fileWriter.append(",");
 
+                        //class path
                         fileWriter.append(file.getPaths().get(0));
                         fileWriter.append(",");
 
+                        //LOCs
                         fileWriter.append(file.getLOCs().get(0).toString());
                         fileWriter.append(",");
 
+                        //churn
                         fileWriter.append(file.getChurn().get(0).toString());
                         fileWriter.append(",");
 
+                        //age
                         fileWriter.append((Integer.toString(i - file.getRevisionFirstAppearance() + 1)));
                         fileWriter.append(",");
 
+                        //weighted age
+                        fileWriter.append(file.getWeightedAge().get(0).toString());
+                        fileWriter.append(",");
+
+                        //authors number
                         fileWriter.append((file.getnAuth().get(0).toString()));
                         fileWriter.append(",");
 
+                        //number of revisions
                         fileWriter.append(file.getRevisions().get(0).toString());
                         fileWriter.append(",");
 
+                        //touched LOCs
                         fileWriter.append(file.getTouchedLOCs().get(0).toString());
+                        fileWriter.append(",");
+
+                        //Added LOCs
+                        fileWriter.append(file.getLOCAdded().get(0).toString());
+                        fileWriter.append(",");
+
+                        //number of fixes
+                        fileWriter.append(file.getnFix().get(0).toString());
+                        fileWriter.append(",");
+
+                        //buggyness
+                        fileWriter.append(file.getBuggy().get(0).toString());
+                        fileWriter.append(",");
 
                         fileWriter.append("\n");
 
                         file.getPaths().remove(0);
                         file.getLOCs().remove(0);
                         file.getChurn().remove(0);
+                        file.getWeightedAge().remove(0);
                         file.getnAuth().remove(0);
                         file.getRevisions().remove(0);
                         file.getTouchedLOCs().remove(0);
+                        file.getLOCAdded().remove(0);
+                        file.getnFix().remove(0);
+                        file.getBuggy().remove(0);
 
                         file.decAppearances();
                     }
@@ -224,7 +188,7 @@ public class FIlesRet {
                 tkns = treeWalk.getPathString().split("/");
                 if(!treeWalk.getPathString().contains("/test")){
                     //System.out.println("Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
-                    ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString(), releaseNumber-1);
+                    ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString(), releaseNumber-1); //fondamentalmente va bene solo se ha lo stesso nome
 
                     if (ret >= 0) {
 
@@ -251,6 +215,7 @@ public class FIlesRet {
                             files.get(ret).insertTouchedLOCs(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
                             files.get(ret).insertLOCAdded(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
                         }
+                        files.get(ret).insertWeightedAge(releaseNumber);
 
                     } else {
                         //System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
@@ -260,6 +225,7 @@ public class FIlesRet {
                         rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel));
                         rf.insertChurn(0);
                         rf.setRevisionFirstAppearance(releaseNumber);
+
 
                         if(releaseNumber > 1) {
                             Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel, relNames.get(releaseNumber-2));
@@ -278,6 +244,8 @@ public class FIlesRet {
                             rf.insertTouchedLOCs(rf.getLOCs().get(0));
                             rf.insertLOCAdded(rf.getLOCs().get(0));
                         }
+                        rf.insertWeightedAge(releaseNumber);
+
                         files.add(rf);
                     }
                 }
@@ -312,31 +280,6 @@ public class FIlesRet {
         return lines;
     }
 
-    /**
-     * TODO: devi farlo fra due release poichè se glie ne passi una sola prende tutti i commit fino a quel punto (partendo dal primo di sempre)
-     * */
-    public static int countAuthorsInFile(String filePath, String currentRel) throws IOException, GitAPIException {
-        int authorsCount = 0;
-
-
-        ObjectId to = repository.resolve(currentRel); //resolve the commit id from the tag name
-
-
-        BlameResult blameResult = new Git(repository).blame()
-                .setFilePath(filePath)
-                .setStartCommit(to)
-                .call();
-
-        Set<String> authors = new HashSet<>();
-        for (int i = 0; i < blameResult.getResultContents().size(); i++) {
-
-            authors.add(blameResult.getSourceAuthor(i).getName());
-            //System.out.println(blameResult.getSourceAuthor(i).getName());
-        }
-
-        authorsCount = authors.size();
-        return authorsCount;
-    }
 
 
     public static Map<String, Integer> countAuthAndRevs(Repository repository, String file, String currentRelease, String prevRelease) throws IOException, GitAPIException {
@@ -369,7 +312,7 @@ public class FIlesRet {
         if(prevRelCommit != null) {
             log = git.log().addRange(prevRelCommit, curRelCommit);
         }else{
-            log = git.log().add(curRelCommit);
+            log = git.log().addRange(theOldestCommit, curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine.
         }
 
         Iterable<RevCommit> commits = log.addPath(file).call();
@@ -396,86 +339,6 @@ public class FIlesRet {
     }
 
 
-
-    /**
-     * devi farlo fra due release poichè se glie ne passi una sola prende tutti i commit fino a quel punto (partendo dal primo di sempre) --> DONE
-     *
-     * */
-    public static int countCommits(Repository repository, String file, String currentRelease, String prevRelease) throws IOException, GitAPIException {
-        RevWalk walk = new RevWalk(repository);
-        Git git = new Git(repository);
-        int c = 0;
-
-        LogCommand log;
-
-        ObjectId objcurId = null;
-        ObjectId objprevId = null;
-        RevCommit curRelCommit = null;
-        RevCommit prevRelCommit = null;
-
-        ObjectReader reader = repository.newObjectReader();
-        CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
-        CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
-
-        // prendi gli object id delle release
-        objcurId = repository.resolve(currentRelease);
-        if(prevRelease != null) {
-            objprevId = repository.resolve(prevRelease);
-        }
-
-        curRelCommit = walk.parseCommit(objcurId);
-        if(objprevId != null){
-            prevRelCommit = walk.parseCommit(objprevId);
-        }
-
-
-
-        // fai il log dell'ultima release e prendi tutti i commit
-        //LogCommand log = git.log().add(curRelCommit);
-
-        if(prevRelCommit != null) {
-            log = git.log().addRange(prevRelCommit, curRelCommit);
-        }else{
-            log = git.log().add(curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine.
-        }
-
-        Iterable<RevCommit> commits = log.call();
-
-        ArrayList<RevCommit> relCommits = new ArrayList<>();
-        for(RevCommit com : commits){
-            relCommits.add(com);
-        }
-
-        for(RevCommit commit : relCommits) {
-
-            if(relCommits.indexOf(commit) == relCommits.size()-1)
-                break;
-
-
-            RevTree tree1 = commit.getTree();
-            newTreeIter.reset(reader, tree1);
-
-            RevTree tree2 = relCommits.get(relCommits.indexOf(commit) + 1).getTree();
-            oldTreeIter.reset(reader, tree2);
-
-            DiffFormatter diffFormatter = new DiffFormatter( DisabledOutputStream.INSTANCE );
-            diffFormatter.setRepository(repository);
-            List<DiffEntry> entries = diffFormatter.scan(oldTreeIter, newTreeIter);
-
-            //System.out.println(commit + "     c: " + c);
-            for( DiffEntry entry : entries ) {
-                if(entry.getNewPath().equals(file)){
-                    //System.out.println(entry.getNewPath());
-                    c++;
-                }
-
-            }
-        }
-
-        //System.out.println(c);
-
-        return c;
-    }
 
 
     /**
@@ -558,7 +421,7 @@ public class FIlesRet {
             }
             LOCTouched += locsA + locsD;
             LOCAdded += locsA;
-            break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quidni se si arriva qui quelle del file d'interesse sono state controllate tutte
+            break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quindi se si arriva qui quelle del file d'interesse sono state controllate tutte
 
         }
         //System.out.println("Total LOCs touched: " + resA - resD);
@@ -569,16 +432,149 @@ public class FIlesRet {
     }
 
 
+    /**
+     * Retrieve all the commits and save only the ones which have a ticket in their message
+     * @param repository
+     * @throws IOException
+     * @throws GitAPIException
+     */
+
+    public static void retrieveTicketsFromCommit(Repository repository) throws IOException, GitAPIException {
+        RevWalk walk = new RevWalk(repository);
+        Git git = new Git(repository);
+        ArrayList<RevCommit> commitsMsgs = new ArrayList<>();
+        for (RevCommit commit : git.log().all().call()) {
+            commitsMsgs.add(commit);
+            //System.out.println(commit.getName() + " " + commit.getShortMessage());
+        }
+
+        //dai tag presi da jira filtra tutti i commit di git mantenendo solo quelli che contengono un ticket
+        for(RevCommit c : commitsMsgs){
+            for(Tickets t : tickets){
+                if(c.getShortMessage().contains(t.getName())){
+                    t.setCommitId(c.getName()); //aggiungo il commitID con cui è stato fatto quel fix
+                    buggyRelCommits.add(t);
+                    //System.out.println(c.getName() + " " + c.getShortMessage());
+                }
+            }
+        }
+    }
+
+
+    /* questa cosa devo farla quando ho terminato di controllare tutte le metriche per ogni file di ogni release. Questo perchè quando trovo una classe che in una certa release
+    * è stata fixata allora devo andare a settare a buggy quella classe in tutte quante le release precedenti (dall' IV). Lo faccio così:
+    * - se sul ticket di jira c'è l'IV allora torno indietro tra release fino a quella settando a buggy la classe
+    * - se non c'è l'IV invece faccio proportion, per il quale ho bisogno di OV e FV (che ho per tutte)
+    *  */
+    public static int checkIfBuggy(Repository repository, String currentRelease, String prevRelease, RepoFile file) throws IOException, GitAPIException {
+        RevWalk walk = new RevWalk(repository);
+        Git git = new Git(repository);
+        int nFix = 0;
+        TicketList<Tickets> bugs = new TicketList<>();
+
+        LogCommand log;
+
+        ObjectId objcurId;
+        ObjectId objprevId = null;
+        RevCommit curRelCommit;
+        RevCommit prevRelCommit = null;
+
+
+        // prendi gli object id delle release
+        objcurId = repository.resolve(currentRelease);
+        if(prevRelease != null) {
+            objprevId = repository.resolve(prevRelease);
+        }
+
+        curRelCommit = walk.parseCommit(objcurId);
+        if(objprevId != null){
+            prevRelCommit = walk.parseCommit(objprevId);
+        }
+
+        if(prevRelCommit != null) {
+            log = git.log().addRange(prevRelCommit, curRelCommit);
+        }else{
+            log = git.log().addRange(theOldestCommit, curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine.
+        }
+
+        Iterable<RevCommit> commits = log.addPath(file.getPaths().get(0)).call();
+
+        ArrayList<RevCommit> relCommits = new ArrayList<>();
+        for(RevCommit commit : commits){
+            relCommits.add(commit);
+        }
+
+        /* per il seguente file prendi i commit relativi ad un ticket: significa che con quel commit il file (la classe) è stata fixata da un bug */
+        for(RevCommit com : relCommits){
+
+            if(buggyRelCommits.containsCommit(com.getName())){ //ho creato una classe che estende ArrayList in modo da poter avere un contains che controlla solo il nome del commit
+                //significa che è buggy
+                bugs.add(buggyRelCommits.getFromCommitId(com.getName())); //ho tutti i ticket dei bug che affettano questo file
+                nFix++; //conto quanti commit (con ticket) hanno toccato quel file
+            }
+
+        }
+
+        if(nFix > 0){
+            /* devo andare a settare a buggy il file in tutte le release precedenti fino alla INJECTED VERSION (che su jira corrisponde alla AFFECTED VERSION) */
+            for(RepoFile f : files){ //scorro tutti i file e arrivo fino a quello d'interesse
+                if(f.getName().equals(file.getPaths().get(0))){ //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
+                    /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
+                    * all'affected versions presenti in t */
+                    ArrayList<String> fileRels = f.getReleases();
+                    for(Tickets t : bugs){
+                        int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
+                        int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size()-1)) + 1;
+                        for(int i = firstAffRel; i < lastAffRel; i++){
+                            f.getBuggy().set(i, true);
+                        }
+                    }
+                    break; //il file una volta compare nella lista
+                }
+            }
+        }
+
+        //ritorno il numero di commit che hanno fixato il file, se è pari a 0 allora non è stato fixato
+        return nFix;
+
+    }
+
+    /**
+     * Get the oldest commit of the repository. The oldest commit is needed when there is the necessity do make a log beetween two commit in caso of the first release,
+     * so that it is possible to callo log().addRange(theOldest, release).
+     * @param repository
+     */
+    public static void getTheOldestCommit(Repository repository){
+        RevWalk walk = new RevWalk(repository);
+        RevCommit c = null;
+        AnyObjectId headId;
+        try {
+            headId = repository.resolve(Constants.HEAD);
+            RevCommit root = walk.parseCommit(headId);
+            walk.sort(RevSort.REVERSE);
+            walk.markStart(root);
+            c = walk.next();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        theOldestCommit = c;
+        //System.out.println(c.getName() + " " + c.getCommitTime() + " " + c.getShortMessage());
+    }
+
+
 
     public static void main(String[] args) throws IOException, GitAPIException {
         int relNum = 0;
+        int ret;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
                 .setGitDir(new File(repo_path)).readEnvironment()
                 .findGitDir().build();
 
 
-        retrieveReleases();
+        getTheOldestCommit(repository); // prendi l'id del primo commit di sempre
+        retrieveReleases(); // prendi la lista di tutte le release: vengono filtrate quelle di jira con quelle prese dai tag di git
 
 
         long start = System.currentTimeMillis();
@@ -588,10 +584,26 @@ public class FIlesRet {
         for(String releaseName : relNames) {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
-            listRepositoryContents(releaseName, relNum);
+            listRepositoryContents(releaseName, relNum); // calcola le metriche
         }
 
-        // Scrivi il file
+        // calcola e setta la buggyness
+        retrieveTickets(projName);
+        retrieveTicketsFromCommit(repository);
+        for (String rel : relNames){    //TODO: a checkIfBuggy gli devo passare il nome del file, ma il file può avere differenti nomi (paths)...
+            for(RepoFile f : files){
+                if(relNames.indexOf(rel) == 0)
+                    ret = checkIfBuggy(repository, rel, null, f);
+                else
+                    ret = checkIfBuggy(repository, rel, relNames.get(relNames.indexOf(rel) - 1), f);
+
+                f.insertnFix(ret);
+                // la buggyness viene direttamente settata da checkIfBuggy
+            }
+        }
+
+
+        // Scrivi il file csv
         writeOnFile();
 
         long end = System.currentTimeMillis();
@@ -608,7 +620,8 @@ public class FIlesRet {
                 .setGitDir(new File(repo_path)).readEnvironment()
                 .findGitDir().build();
 
-        //retrieveTags();
+        retrieveTickets(projName);
+        retrieveTicketsFromCommit(repository);
     }*/
 
 }

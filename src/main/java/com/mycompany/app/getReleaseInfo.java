@@ -51,7 +51,7 @@ public class getReleaseInfo {
         System.out.println(call.size());
         for (Ref ref : call) {
             //RevCommit commit = repository.parseCommit(ref.getObjectId());
-            System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
+            //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
 
             gitReleases.add(ref.getName());
 
