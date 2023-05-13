@@ -1,5 +1,6 @@
 package com.mycompany.app;
 
+import org.eclipse.jgit.api.errors.GitAPIException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -7,7 +8,9 @@ import org.json.JSONObject;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -80,27 +83,29 @@ public class RetrieveTicketsID {
         for(int i = 0; i < relNames.size() - 1; i++) {
             if(d.isAfter(relNames.get(i).getDate()) && d.isBefore(relNames.get(i + 1).getDate())){
                 //se è compresa fra queste due vuol dire che è la seconda
-                return relNames.get(i+1);
+                return relNames.get(i + 1);
             }
         }
 
-        //it this case it must be the last one
+        //in this case it must be the last one
         return relNames.get(relNames.size()-1);
 
     }
 
     public static Version getTheInjectedVer(ArrayList<Version> ivs){
-        ivs.sort(new Comparator<Version>() {
-            @Override
-            public int compare(Version o1, Version o2) {
-                return o1.compare(o2);
-            }
-        });
+        if(ivs.size() > 0) {
+            ivs.sort(new Comparator<Version>() {
+                @Override
+                public int compare(Version o1, Version o2) {
+                    return o1.compare(o2);
+                }
+            });
 
-        for(Version v : relNames) {
-            //faccio così perchè in questo modo ho proprio l'oggetto versione presente in relNames ed è più facile calcolarmi le affected versions
-            if (v.getExtendedName().equals(ivs.get(0).getExtendedName())) //ivs.get(0)  ->  la prima sarà la più vecchia
-                return v;
+            for (Version v : relNames) {
+                //faccio così perchè in questo modo ho proprio l'oggetto versione presente in relNames ed è più facile calcolarmi le affected versions
+                if (v.getExtendedName().equals(ivs.get(0).getExtendedName())) //ivs.get(0)  ->  la prima sarà la più vecchia
+                    return v;
+            }
         }
 
         //in caso non la trova c'è qualche problema grosso
@@ -108,18 +113,20 @@ public class RetrieveTicketsID {
     }
 
 
-    public static Version getTheFixedVer(ArrayList<Version> ivs){
-        ivs.sort(new Comparator<Version>() {
-            @Override
-            public int compare(Version o1, Version o2) {
-                return o1.compare(o2);
-            }
-        });
+    public static Version getTheFixedVer(ArrayList<Version> fvs){
+        if(fvs.size() > 0) {
+            fvs.sort(new Comparator<Version>() {
+                @Override
+                public int compare(Version o1, Version o2) {
+                    return o1.compare(o2);
+                }
+            });
 
-        for(Version v : relNames) {
-            //faccio così perchè in questo modo ho proprio l'oggetto versione presente in relNames ed è più facile calcolarmi le affected versions
-            if (v.getExtendedName().equals(ivs.get(ivs.size() - 1).getExtendedName())) //ivs.size() - 1  ->  l'ultima sarà la più nuova, e quindi l'ultima in cui è stata fixata
-                return v;
+            for (Version v : relNames) {
+                //faccio così perchè in questo modo ho proprio l'oggetto version presente in relNames ed è più facile calcolarmi le affected versions
+                if (v.getExtendedName().equals(fvs.get(fvs.size() - 1).getExtendedName())) //ivs.size() - 1  ->  l'ultima sarà la più nuova, e quindi l'ultima in cui è stata fixata
+                    return v;
+            }
         }
 
         //in caso non la trova c'è qualche problema grosso
@@ -131,7 +138,10 @@ public class RetrieveTicketsID {
         Version iv;
         Version fv;
         Version ov;
-        Integer j = 0, i = 0, total = 1;
+        int j = 0, i = 0, total = 1;
+
+        DateTimeFormatter onlyDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
         //Get JSON API for closed bugs w/ AV in the project
         do {
             //Only gets a max of 1000 at a time, so must do this multiple times if bugs >1000
@@ -139,12 +149,12 @@ public class RetrieveTicketsID {
             String url = "https://issues.apache.org/jira/rest/api/2/search?jql=project=%22"
                     + projName + "%22AND%22issueType%22=%22Bug%22AND(%22status%22=%22closed%22OR"
                     + "%22status%22=%22resolved%22)AND%22resolution%22=%22fixed%22&fields=key,resolutiondate,versions,created,fixVersions&startAt="
-                    + i.toString() + "&maxResults=" + j.toString();
+                    + i + "&maxResults=" + j;
             JSONObject json = readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
 
-            for(Object o : issues)
-                System.out.println(o);
+            /*for(Object o : issues)
+                System.out.println(o);*/
 
             total = json.getInt("total");
             for (; i < total && i < j; i++) {
@@ -153,8 +163,8 @@ public class RetrieveTicketsID {
                 String key = row.get("key").toString();
 
                 JSONObject fields = (JSONObject) row.get("fields");
-                LocalDateTime resDate = LocalDateTime.parse(fields.get("resolutiondate").toString().split(".")[0]); //non mi serve
-                LocalDateTime ovDate = LocalDateTime.parse(fields.get("created").toString().split(".")[0]); //opening version date
+                LocalDateTime resDate = LocalDateTime.parse(fields.get("resolutiondate").toString().split("\\.")[0]); //non mi serve
+                LocalDateTime ovDate = LocalDateTime.parse(fields.get("created").toString().split("\\.")[0]); //opening version date
 
 
                 //prendi le opening versions
@@ -163,8 +173,13 @@ public class RetrieveTicketsID {
                 try {
                     for(int z = 0; z < injVer.length(); z++){
                         String name = injVer.getJSONObject(z).get("name").toString();
-                        LocalDateTime date = LocalDateTime.parse(injVer.getJSONObject(z).get("releaseDate").toString());
-                        Version v = new Version(name, date);
+                        LocalDateTime date = LocalDate.parse(injVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
+                        Version v = null;
+                        if(projName.equals("BOOKKEEPER"))
+                            v = new Version("refs/tags/release-" + name, date);
+                        else
+                            v = new Version("refs/tags/syncope-" + name, date);
+
                         injectedVersions.add(v);
                     }
                 } catch (JSONException e) {
@@ -178,8 +193,13 @@ public class RetrieveTicketsID {
                 try {
                     for(int z = 0; z < fixVer.length(); z++){
                         String name = fixVer.getJSONObject(z).get("name").toString();
-                        LocalDateTime date = LocalDateTime.parse(fixVer.getJSONObject(z).get("releaseDate").toString());
-                        Version v = new Version(name, date);
+                        LocalDateTime date = LocalDate.parse(fixVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
+                        Version v = null;
+                        if(projName.equals("BOOKKEEPER"))
+                            v = new Version("refs/tags/release-" + name, date);
+                        else
+                            v = new Version("refs/tags/syncope-" + name, date);
+
                         fixedVersions.add(v);
                     }
                 } catch (JSONException e) {
@@ -198,10 +218,11 @@ public class RetrieveTicketsID {
                     //devo prendere la più vecchia
                     iv = getTheInjectedVer(injectedVersions);
                 }
-                fv = getTheFixedVer(fixedVersions);
 
+                fv = getTheFixedVer(fixedVersions);
                 if(fv == null){
                     //without the fixed version the ticket is useless
+                    //System.out.println("continuing");
                     continue;
                 }
 
@@ -213,18 +234,25 @@ public class RetrieveTicketsID {
                 }
 
                 tickets.add(newTicket);
-
-                /*System.out.println(key + ":\t" + "\t\t" + created + "\t" + resDate);
-                System.out.println("\t\tAffected versions" + injVerNames);
-                System.out.println("\t\tFixed versions" + fixVerNames);*/
             }
         } while (i < total);
 
+        System.out.println("num of tickets: " + tickets.size());
+        for (Tickets t : tickets) {
+            System.out.println(t.getName());
+            if(t.getIv() != null)
+                System.out.println("\t\tINJECTED VERSION: " + t.getIv().getExtendedName() + " FIXED VERSION: " + t.getFv().getExtendedName());
+            else
+                System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
+            for(Version tmp : t.getAffectedVersions())
+                System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getExtendedName());
+        }
         //Bisogna togliere quelli della seconda metà delle release
     }
 
-    public static void main(String[] argv) throws IOException {
-        retrieveTickets("BOOKKEEPER");
+    public static void main(String[] argv) throws IOException, GitAPIException {
+        retrieveReleases();
+        retrieveTickets("SYNCOPE");
     }
 
 }

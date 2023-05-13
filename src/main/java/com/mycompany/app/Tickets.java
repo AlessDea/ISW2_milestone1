@@ -2,9 +2,6 @@ package com.mycompany.app;
 
 import java.util.ArrayList;
 
-import static com.mycompany.app.getReleaseInfo.relNames;
-import static com.mycompany.app.getReleaseInfo.releasesInfo;
-
 /**
  * Ticket per un determinato Bug
  */
@@ -26,7 +23,7 @@ public class Tickets {
         this.fv = fv;
         this.ov = ov;
         this.affectedVersions = new ArrayList<>();
-        this.affectedVersions = (ArrayList<Version>) releases.subList(releases.indexOf(iv), releases.indexOf(fv));
+        this.affectedVersions = new ArrayList<>(releases.subList(releases.indexOf(iv), releases.indexOf(fv)));
     }
 
     //TODO: implements proportion
@@ -46,7 +43,6 @@ public class Tickets {
     public String getName() {
         return name;
     }
-
 
     public Version getIv() {
         return iv;

@@ -3,7 +3,6 @@ package com.mycompany.app;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.blame.BlameResult;
 import org.eclipse.jgit.diff.*;
 import org.eclipse.jgit.lib.*;
 import org.eclipse.jgit.patch.FileHeader;
@@ -26,10 +25,10 @@ import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 public class FIlesRet {
 
     public static ArrayList<RepoFile> files = new ArrayList<>();
-    //public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git";
-    public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
-    //public static String projName = "SYNCOPE";
-    public static String projName = "BOOKKEEPER";
+    public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git";
+    //public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
+    public static String projName = "SYNCOPE";
+    //public static String projName = "BOOKKEEPER";
     public static List<Ref> branches = new ArrayList<>();
     public static List<Ref> tags = new ArrayList<>();
     public static Repository repository;
@@ -590,7 +589,7 @@ public class FIlesRet {
         // calcola e setta la buggyness
         retrieveTickets(projName);
         retrieveTicketsFromCommit(repository);
-        for (Version rel : relNames){    //TODO: a checkIfBuggy gli devo passare il nome del file, ma il file può avere differenti nomi (paths)...
+        for (Version rel : relNames){
             for(RepoFile f : files){
                 if(relNames.indexOf(rel) == 0)
                     ret = checkIfBuggy(repository, rel.getExtendedName(), null, f);

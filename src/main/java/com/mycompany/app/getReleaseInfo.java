@@ -1,13 +1,9 @@
 package com.mycompany.app;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.ListBranchCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTag;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,26 +16,27 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import static com.mycompany.app.FIlesRet.projName;
+import static com.mycompany.app.FIlesRet.repo_path;
+
 public class getReleaseInfo {
 
     public static HashMap<LocalDateTime, String> releaseNames;
     public static HashMap<LocalDateTime, String> releaseID;
-    public static HashMap<String, LocalDateTime> releasesInfo;
+    public static HashMap<String, LocalDateTime> releasesInfo = new HashMap<>();
     public static ArrayList<LocalDateTime> jiraReleases;
     public static Integer numVersions;
-    public static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
+    public static ArrayList<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
     public static Repository repository;
     public static ArrayList<String> gitReleases = new ArrayList<>();
 
 
 
     /*
-     * Le release sono quelle i cui commit hanno un tag. Notare che quelli validi sono quelli dalla release 1.2.1, quelli
-     * precedenti non fanno parte della repository principale ma di un fork probabilmente.
-     *
+     * Le release sono quelle i cui commit hanno un tag.
      * */
     public static void retrieveTags() throws GitAPIException, IOException {
-        String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
+        //String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         Repository repository = builder
                 .setGitDir(new File(repo_path)).readEnvironment()
@@ -49,7 +46,7 @@ public class getReleaseInfo {
         Git jGit = new Git(repository);
         List<Ref> call = jGit.tagList().call();
 
-        System.out.println(call.size());
+
         for (Ref ref : call) {
             //RevCommit commit = repository.parseCommit(ref.getObjectId());
             //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
@@ -65,8 +62,6 @@ public class getReleaseInfo {
 
     public static void retrieveReleases() throws IOException, JSONException, GitAPIException {
 
-        //String projName = "SYNCOPE";
-        String projName = "BOOKKEEPER";
         //Fills the arraylist with releases dates and orders them
         //Ignores releases with missing dates
         jiraReleases = new ArrayList<LocalDateTime>();
@@ -101,9 +96,9 @@ public class getReleaseInfo {
             for(LocalDateTime l : releaseNames.keySet()) {
                 if(l.equals(ldt))
                     if(projName.equals("SYNCOPE"))
-                        tmp.add("refs/tags/syncope-" + releaseNames.get(l));
+                        tmp.add("refs/tags/syncope-" + releaseNames.get(l)); //per syncope
                     else
-                        tmp.add("refs/tags/release-" + releaseNames.get(l));
+                        tmp.add("refs/tags/release-" + releaseNames.get(l)); //per bookkeeper
             }
         }
 
@@ -117,19 +112,24 @@ public class getReleaseInfo {
         /* toglie le release che non si trovano su git */
         for(String rel : tmp){
             if(gitReleases.contains(rel)) {
-                Version v = new Version(rel, releasesInfo.get(rel));
-                relNames.add(v); //non c'è su git quindi la cancello
+                if(releasesInfo.get(rel) != null) {
+                    System.out.println(rel + " : " + releasesInfo.get(rel));
+                    Version v = new Version(rel, releasesInfo.get(rel));
+                    relNames.add(v); //non c'è su git quindi la cancello
+                }
             }
         }
-        System.out.println(relNames);
+
 
 
         // scarta l'ultimo 50% delle release
         int len = relNames.size();
-        System.out.println(len);
         for(int j =  len - 1; j > len/2; j--){
             relNames.remove(j);
         }
+
+        /*for(Version v : relNames)
+            System.out.println(v.getExtendedName());*/
 
     }
 
@@ -137,9 +137,14 @@ public class getReleaseInfo {
     public static void addRelease(String strDate, String name, String id) {
         LocalDate date = LocalDate.parse(strDate);
         LocalDateTime dateTime = date.atStartOfDay();
+
         if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
-            releasesInfo.put(name, dateTime);
+            if(projName.equals("SYNCOPE")) {
+                releasesInfo.put("refs/tags/syncope-" + name, dateTime);
+            }else {
+                releasesInfo.put("refs/tags/release-" + name, dateTime);
+            }
         }
         releaseNames.put(dateTime, name);
         releaseID.put(dateTime, id);
