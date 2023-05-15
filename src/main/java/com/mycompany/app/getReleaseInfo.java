@@ -66,6 +66,7 @@ public class getReleaseInfo {
         //Ignores releases with missing dates
         jiraReleases = new ArrayList<LocalDateTime>();
         Integer i;
+        int vernum = 1;
         String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName;
         JSONObject json = readJsonFromUrl(url);
         JSONArray versions = json.getJSONArray("versions");
@@ -113,9 +114,10 @@ public class getReleaseInfo {
         for(String rel : tmp){
             if(gitReleases.contains(rel)) {
                 if(releasesInfo.get(rel) != null) {
-                    System.out.println(rel + " : " + releasesInfo.get(rel));
-                    Version v = new Version(rel, releasesInfo.get(rel));
-                    relNames.add(v); //non c'è su git quindi la cancello
+                    //System.out.println(rel + " : " + releasesInfo.get(rel));
+                    Version v = new Version(rel, releasesInfo.get(rel), vernum);
+                    relNames.add(v);
+                    vernum++;
                 }
             }
         }

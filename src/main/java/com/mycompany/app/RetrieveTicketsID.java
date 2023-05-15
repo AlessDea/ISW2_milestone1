@@ -14,6 +14,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 
+import static com.mycompany.app.FIlesRet.projName;
+import static com.mycompany.app.Proportion.revisionProportionInc;
 import static com.mycompany.app.getReleaseInfo.relNames;
 import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
@@ -55,21 +57,6 @@ public class RetrieveTicketsID {
         }
     }
 
-    /**
-    * Per calcolare l'IV c'è bisogno di calcolare la Proportion, questa può essere fatta in tre modi:
-     * - cold start: usando dati di altri progetti
-     * - increment
-     * - moving window
-    * */
-    public static int proportion(int ov, int fv){
-        int iv;
-        int prop = 0;
-        //prop = prop_cold_start(); // = (fv - iv)/(fv - ov);
-        iv = fv - (fv - ov) * prop;
-
-        return iv;
-    }
-
 
     public static Version getTheOpeningVerName(LocalDateTime d){
 
@@ -87,8 +74,7 @@ public class RetrieveTicketsID {
             }
         }
 
-        //in this case it must be the last one
-        return relNames.get(relNames.size()-1);
+        return null; //it comes from the last half of the releases
 
     }
 
@@ -108,7 +94,7 @@ public class RetrieveTicketsID {
             }
         }
 
-        //in caso non la trova c'è qualche problema grosso
+        //it comes from the last half of the releases
         return null;
     }
 
@@ -129,7 +115,7 @@ public class RetrieveTicketsID {
             }
         }
 
-        //in caso non la trova c'è qualche problema grosso
+        //it comes from the last half of the releases
         return null;
     }
 
@@ -208,14 +194,16 @@ public class RetrieveTicketsID {
 
                 /* conoscendo la data della opening devo prendermi il nome della release corrispondente */
                 ov = getTheOpeningVerName(ovDate);
+                if(ov == null)
+                    continue; //the ov belongs to the second half of the releases which have been discarded
 
                 /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
                 * devo prendere la più piccola delle injected e la più grande delle fixed.
                 * */
                 if(injectedVersions.size() < 1) {
-                    iv = null; //non c'è la injected, bisognerà usare proportion
+                    iv = null; //injected version not present, must use proportion
                 }else {
-                    //devo prendere la più vecchia
+                    //get the oldest
                     iv = getTheInjectedVer(injectedVersions);
                 }
 
@@ -228,16 +216,17 @@ public class RetrieveTicketsID {
 
                 Tickets newTicket;
                 if(iv != null){
-                    newTicket = new Tickets(key, iv, fv, ov, (ArrayList<Version>) relNames);
+                    newTicket = new Tickets(key, iv, fv, ov, relNames);
                 } else{
-                    newTicket = new Tickets(key, fv, ov);
+                    newTicket = new Tickets(key, fv, ov, relNames);
                 }
 
                 tickets.add(newTicket);
             }
         } while (i < total);
 
-        System.out.println("num of tickets: " + tickets.size());
+
+        /*System.out.println("num of tickets: " + tickets.size());
         for (Tickets t : tickets) {
             System.out.println(t.getName());
             if(t.getIv() != null)
@@ -246,13 +235,54 @@ public class RetrieveTicketsID {
                 System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
             for(Version tmp : t.getAffectedVersions())
                 System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getExtendedName());
+        }*/
+
+        //assign at each version its defects
+        for(Version v : relNames) {
+            ArrayList<Tickets> defects = new ArrayList<>();
+            for(Tickets t : tickets){
+                if(t.getFv().equals(v)){
+                    defects.add(t);
+                }
+            }
+            v.setFixedDefects(defects);
         }
-        //Bisogna togliere quelli della seconda metà delle release
+
+
+
+        for (Version v : relNames){
+            /*System.out.println(v.getVerNum() + " " + v.getExtendedName() + " number of defects: " + v.getFixedDefects().size());
+            System.out.println("Defect proportion: " + v.getDefectProp());*/
+            if(v.getVerNum() == 1) {
+                v.setProp_incremental(v.getDefectProp()); //set the value o prop_incr as P (defectProp) because it's the first release
+                continue; //for the first release the IVs are always 1, it's useless to calculate them and also it's useless to use them
+            }else {
+                v.setProp_incremental(revisionProportionInc(v)); //calculate prop_incremental
+                //System.out.println("Proportion incremental: " + v.getProp_incremental());
+            }
+            v.calcMissingIV(relNames); //calculate the missing IVs
+
+            for(Tickets t : v.getFixedDefects()){
+                if(t.getFv().getVerNum() == t.getIv().getVerNum())
+                    continue;
+                System.out.println(t.getName());
+                if(t.getIv() != null)
+                    System.out.println("\t\tINJECTED VERSION: " + t.getIv().getVerNum() + " " + t.getIv().getExtendedName() + " FIXED VERSION: " + t.getFv().getVerNum() + " " + t.getFv().getExtendedName());
+                else
+                    System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
+                for(Version tmp : t.getAffectedVersions())
+                    System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getVerNum() + " " + tmp.getExtendedName());
+            }
+        }
+
+
+
     }
 
-    public static void main(String[] argv) throws IOException, GitAPIException {
+    /*public static void main(String[] argv) throws IOException, GitAPIException {
         retrieveReleases();
-        retrieveTickets("SYNCOPE");
-    }
+        retrieveTickets(projName);
+
+    }*/
 
 }

@@ -2,6 +2,9 @@ package com.mycompany.app;
 
 import java.util.ArrayList;
 
+import static com.mycompany.app.Proportion.calcInjectedVersion;
+import static com.mycompany.app.getReleaseInfo.relNames;
+
 /**
  * Ticket per un determinato Bug
  */
@@ -22,23 +25,26 @@ public class Tickets {
         this.iv = iv;
         this.fv = fv;
         this.ov = ov;
-        this.affectedVersions = new ArrayList<>();
         this.affectedVersions = new ArrayList<>(releases.subList(releases.indexOf(iv), releases.indexOf(fv)));
+
     }
 
-    //TODO: implements proportion
-    public Tickets(String name, Version fv, Version ov) {
+    public Tickets(String name, Version fv, Version ov, ArrayList<Version> releases) {
         this.name = name;
         this.fv = fv;
         this.ov = ov;
+        this.iv = null;
         this.affectedVersions = new ArrayList<>();
 
-        /* inizializzo l'array delle affected version: non ho l'injected version quindi bisogna usare proportion*/
-
-        /* ... Proportion ... */
-
-
     }
+
+    public void calIvAndSetAv(ArrayList<Version> releases){
+        /* ... The Injected Version is not available: use Proportion ... */
+        int ivn = calcInjectedVersion(this);
+        iv = releases.get(ivn - 1);
+        this.affectedVersions = new ArrayList<>(releases.subList(releases.indexOf(iv), releases.indexOf(fv)));
+    }
+
 
     public String getName() {
         return name;
@@ -50,6 +56,10 @@ public class Tickets {
 
     public Version getFv() {
         return fv;
+    }
+
+    public Version getOv() {
+        return ov;
     }
 
     public String getCommitId() {
@@ -72,6 +82,10 @@ public class Tickets {
         this.fv = fv;
     }
 
+    public void setOv(Version ov) {
+        this.ov = ov;
+    }
+
     public void setCommitId(String commitId) {
         this.commitId = commitId;
     }
@@ -79,4 +93,5 @@ public class Tickets {
     public void setAffectedVersions(ArrayList<Version> affectedVersions) {
         this.affectedVersions = affectedVersions;
     }
+
 }

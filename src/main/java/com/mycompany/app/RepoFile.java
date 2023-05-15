@@ -6,7 +6,7 @@ public class RepoFile
 {
     private String name;
     private int appearances;
-    private ArrayList<String> releases;
+    private ArrayList<Version> releases;
     private ArrayList<String> paths;
     private ArrayList<Integer> LOCs;
     private ArrayList<Integer> touchedLOCs; /* between two release : added + deleted */
@@ -33,6 +33,7 @@ public class RepoFile
         this.LOCAdded = new ArrayList<>();
         this.buggy = new ArrayList<>();
         this.weightedAge = new ArrayList<>();
+        this.nFix = new ArrayList<>();
 
     }
 
@@ -51,12 +52,12 @@ public class RepoFile
         return false;
     }
 
-    public void insertRelease(String release) {
+    public void insertRelease(Version release) {
         this.releases.add(release);
         this.buggy.add(false); // all'inizio le considero tutte non buggy
     }
 
-    public ArrayList<String> getReleases() {
+    public ArrayList<Version> getReleases() {
         return releases;
     }
 
@@ -171,6 +172,7 @@ public class RepoFile
     }
 
     public void insertWeightedAge(int curRel) {
-        this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(curRel-1));
+        //System.out.println("Loc touched array size: " + this.getTouchedLOCs().size());
+        this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(this.getTouchedLOCs().size()-1));
     }
 }
