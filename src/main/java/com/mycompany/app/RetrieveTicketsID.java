@@ -262,7 +262,7 @@ public class RetrieveTicketsID {
             }
             v.calcMissingIV(relNames); //calculate the missing IVs
 
-            for(Tickets t : v.getFixedDefects()){
+            /*for(Tickets t : v.getFixedDefects()){
                 if(t.getFv().getVerNum() == t.getIv().getVerNum())
                     continue;
                 System.out.println(t.getName());
@@ -272,17 +272,7 @@ public class RetrieveTicketsID {
                     System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
                 for(Version tmp : t.getAffectedVersions())
                     System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getVerNum() + " " + tmp.getExtendedName());
-            }
+            }*/
         }
-
-
-
     }
-
-    /*public static void main(String[] argv) throws IOException, GitAPIException {
-        retrieveReleases();
-        retrieveTickets(projName);
-
-    }*/
-
 }

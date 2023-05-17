@@ -18,6 +18,7 @@ public class RepoFile
     private ArrayList<Boolean> buggy;
     private ArrayList<Integer> nFix; // number of fix in each release
     private ArrayList<Integer> weightedAge; //Age of release wighted by LoC touched
+    private ArrayList<Integer> avgSetSize;
 
 
     public RepoFile(String name) {
@@ -34,6 +35,7 @@ public class RepoFile
         this.buggy = new ArrayList<>();
         this.weightedAge = new ArrayList<>();
         this.nFix = new ArrayList<>();
+        this.avgSetSize = new ArrayList<>();
 
     }
 
@@ -174,5 +176,13 @@ public class RepoFile
     public void insertWeightedAge(int curRel) {
         //System.out.println("Loc touched array size: " + this.getTouchedLOCs().size());
         this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(this.getTouchedLOCs().size()-1));
+    }
+
+    public ArrayList<Integer> getAvgSetSize() {
+        return avgSetSize;
+    }
+
+    public void insertAvgSetSize(int avgSetSize) {
+        this.avgSetSize.add(avgSetSize);
     }
 }
