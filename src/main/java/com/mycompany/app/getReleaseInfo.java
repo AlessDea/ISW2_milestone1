@@ -140,6 +140,9 @@ public class getReleaseInfo {
         LocalDate date = LocalDate.parse(strDate);
         LocalDateTime dateTime = date.atStartOfDay();
 
+        if(name.contains("2.0.0-M1"))
+            return;
+
         if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
             if(projName.equals("SYNCOPE")) {
