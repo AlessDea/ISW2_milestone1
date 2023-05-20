@@ -214,10 +214,13 @@ public class RetrieveTicketsID {
                     continue;
                 }
 
+                if(ov.getVerNum() > fv.getVerNum()) //if the opening version is post fixed version then this tickets has wrong information
+                    continue;
+
                 Tickets newTicket;
                 if(iv != null){
                     newTicket = new Tickets(key, iv, fv, ov, relNames);
-                } else{
+                }else{
                     newTicket = new Tickets(key, fv, ov, relNames);
                 }
 
@@ -251,8 +254,8 @@ public class RetrieveTicketsID {
 
 
         for (Version v : relNames){
-            /*System.out.println(v.getVerNum() + " " + v.getExtendedName() + " number of defects: " + v.getFixedDefects().size());
-            System.out.println("Defect proportion: " + v.getDefectProp());*/
+            /* System.out.println(v.getVerNum() + " " + v.getExtendedName() + " number of defects: " + v.getFixedDefects().size());
+            System.out.println("Defect proportion: " + v.getDefectProp()); */
             if(v.getVerNum() == 1) {
                 v.setProp_incremental(v.getDefectProp()); //set the value o prop_incr as P (defectProp) because it's the first release
                 continue; //for the first release the IVs are always 1, it's useless to calculate them and also it's useless to use them

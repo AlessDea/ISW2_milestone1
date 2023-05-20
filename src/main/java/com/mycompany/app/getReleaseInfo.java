@@ -58,8 +58,6 @@ public class getReleaseInfo {
     }
 
 
-
-
     public static void retrieveReleases() throws IOException, JSONException, GitAPIException {
 
         //Fills the arraylist with releases dates and orders them
@@ -140,8 +138,8 @@ public class getReleaseInfo {
         LocalDate date = LocalDate.parse(strDate);
         LocalDateTime dateTime = date.atStartOfDay();
 
-        if(name.contains("2.0.0-M1"))
-            return;
+        /*if(name.contains("2.0.0-M1"))
+            return;*/
 
         if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
@@ -168,6 +166,7 @@ public class getReleaseInfo {
             is.close();
         }
     }
+
 
     private static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();

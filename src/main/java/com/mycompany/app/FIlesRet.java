@@ -626,6 +626,7 @@ public class FIlesRet {
 
     }
 
+
     /**
      * Get the oldest commit of the repository. The oldest commit is needed when there is the necessity do make a log beetween two commit in caso of the first release,
      * so that it is possible to callo log().addRange(theOldest, release).
