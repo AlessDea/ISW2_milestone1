@@ -97,8 +97,8 @@ public class RetrieveTicketsID {
     }
 
 
-    public static Version getTheFixedVer(ArrayList<Version> fvs){
-        if(fvs.size() > 0) {
+    public static Version getTheFixedVer(List<Version> fvs){
+        if(!fvs.isEmpty()) {
             fvs.sort(new Comparator<Version>() {
                 @Override
                 public int compare(Version o1, Version o2) {

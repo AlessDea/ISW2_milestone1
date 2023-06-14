@@ -4,11 +4,11 @@ import java.io.*;
 
 public class WekaUtil {
 
-    static final int BK_RELEASES = 8; //7+1
-    static final int SY_RELEASES = 27; //26+1
+    static final int BKRELEASES = 8; //7+1
+    static final int SYRELEASES = 27; //26+1
 
-    static String BK_CSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/BOOKKEEPERFilesInfo.csv";
-    static String SY_CSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/SYNCOPEFilesInfo.csv";
+    static String BKCSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/BOOKKEEPERFilesInfo.csv";
+    static String SYCSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/SYNCOPEFilesInfo.csv";
 
     private static int releases;
     private static String projName;
@@ -89,11 +89,11 @@ public class WekaUtil {
     public static void main(String[] args) {
         String outputDirectoryPath = "Output/";
         projName = "BK";
-        releases = BK_RELEASES;
-        walkForward(outputDirectoryPath, BK_CSV);
+        releases = BKRELEASES;
+        walkForward(outputDirectoryPath, BKCSV);
 
         projName = "SY";
-        releases = SY_RELEASES;
-        walkForward(outputDirectoryPath, SY_CSV);
+        releases = SYRELEASES;
+        walkForward(outputDirectoryPath, SYCSV);
     }
 }

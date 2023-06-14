@@ -133,7 +133,8 @@ public class FIlesRet {
                     }
                 }
             }
-
+            fileWriter.flush();
+            fileWriter.close();
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -147,6 +148,8 @@ public class FIlesRet {
     }
 
     public static int iterateAndCompareFiles(String name, String path) {
+        if(name != null)
+            return -1;
         for (RepoFile f : files) {
             if (f.equals(name) && !f.getPaths().isEmpty()) {
                 if (path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
@@ -275,8 +278,9 @@ public class FIlesRet {
                 }
             }
         }
-        assert reader != null;
-        reader.close();
+        if(reader != null)
+            reader.close();
+
         return lines;
     }
 
