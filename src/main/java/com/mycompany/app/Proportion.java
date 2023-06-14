@@ -1,7 +1,7 @@
 package com.mycompany.app;
 
 
-import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.GetReleaseInfo.relNames;
 
 /**
  * step-by-step explaination
@@ -62,9 +62,9 @@ public class Proportion {
     public static int calcInjectedVersion(Tickets t){
         double iv;
         if(t.getFv().getVerNum() == t.getOv().getVerNum())
-            iv = t.getFv().getVerNum() - 1 * t.getFv().getProp_incremental(); // fv - ov setted as default as 1, otherwise iv equals to fv that is the case we excluded
+            iv = t.getFv().getVerNum() - 1 * t.getFv().getPropIncremental(); // fv - ov setted as default as 1, otherwise iv equals to fv that is the case we excluded
         else
-            iv = t.getFv().getVerNum() - (t.getFv().getVerNum() - t.getOv().getVerNum()) * t.getFv().getProp_incremental();
+            iv = t.getFv().getVerNum() - (t.getFv().getVerNum() - t.getOv().getVerNum()) * t.getFv().getPropIncremental();
 
         return (int) Math.floor(iv);
     }

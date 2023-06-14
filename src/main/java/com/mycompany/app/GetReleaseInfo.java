@@ -19,22 +19,20 @@ import java.util.*;
 import static com.mycompany.app.FIlesRet.projName;
 import static com.mycompany.app.FIlesRet.repoPath;
 
-public class getReleaseInfo {
+public class GetReleaseInfo {
 
-    public static HashMap<LocalDateTime, String> releaseNames;
-    public static HashMap<LocalDateTime, String> releaseID;
-    public static HashMap<String, LocalDateTime> releasesInfo = new HashMap<>();
-    public static List<LocalDateTime> jiraReleases;
-    public static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
-    public static List<String> gitReleases = new ArrayList<>();
+    static Map<LocalDateTime, String> releaseNames;
+    static Map<LocalDateTime, String> releaseID;
+    static Map<String, LocalDateTime> releasesInfo = new HashMap<>();
+    static List<LocalDateTime> jiraReleases;
+    static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
+    static List<String> gitReleases = new ArrayList<>();
 
 
-
-    /*
+    /**
      * Le release sono quelle i cui commit hanno un tag.
      * */
     public static void retrieveTags() throws GitAPIException, IOException {
-        //String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         Repository repository = builder
                 .setGitDir(new File(repoPath)).readEnvironment()
@@ -46,8 +44,6 @@ public class getReleaseInfo {
 
 
         for (Ref ref : call) {
-            //RevCommit commit = repository.parseCommit(ref.getObjectId());
-            //System.out.println("Tag: " + ref.getName() + " Commit: " + ref.getObjectId().getName());// + " Msg: " + commit.getFullMessage());
 
             gitReleases.add(ref.getName());
 
@@ -82,7 +78,6 @@ public class getReleaseInfo {
         }
         // order releases by date
         Collections.sort(jiraReleases, new Comparator<LocalDateTime>() {
-            //@Override
             public int compare(LocalDateTime o1, LocalDateTime o2) {
                 return o1.compareTo(o2);
             }
@@ -114,7 +109,6 @@ public class getReleaseInfo {
 
             if(gitReleases.contains(rel)) {
                 if(releasesInfo.get(rel) != null) {
-                    //System.out.println(rel + " : " + releasesInfo.get(rel));
                     Version v = new Version(rel, releasesInfo.get(rel), vernum);
                     relNames.add(v);
                     vernum++;
@@ -130,8 +124,6 @@ public class getReleaseInfo {
             relNames.remove(j);
         }
 
-        /*for(Version v : relNames)
-            System.out.println(v.getExtendedName());*/
 
     }
 
@@ -140,8 +132,6 @@ public class getReleaseInfo {
         LocalDate date = LocalDate.parse(strDate);
         LocalDateTime dateTime = date.atStartOfDay();
 
-        /*if(name.contains("2.0.0-M1"))
-            return;*/
 
         if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
@@ -153,7 +143,6 @@ public class getReleaseInfo {
         }
         releaseNames.put(dateTime, name);
         releaseID.put(dateTime, id);
-        return;
     }
 
 
@@ -162,8 +151,7 @@ public class getReleaseInfo {
         try {
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             String jsonText = readAll(rd);
-            JSONObject json = new JSONObject(jsonText);
-            return json;
+            return new JSONObject(jsonText);
         } finally {
             is.close();
         }

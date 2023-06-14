@@ -7,6 +7,9 @@ public class WekaUtil {
     static final int BK_RELEASES = 8; //7+1
     static final int SY_RELEASES = 27; //26+1
 
+    static String BK_CSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/BOOKKEEPERFilesInfo.csv";
+    static String SY_CSV = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/SYNCOPEFilesInfo.csv";
+
     private static int releases;
     private static String projName;
 
@@ -44,14 +47,14 @@ public class WekaUtil {
             String outputFilePathTest;
             String line;
 
-            String dir_path = "WalkForward-" + projName;
+            String dirPath = "WalkForward-" + projName + "/";
             new File("Output").mkdir();
-            new File(outputDirectoryPath + dir_path).mkdir();
+            new File(outputDirectoryPath + dirPath).mkdir();
 
             for(int index = 2; index < releases; index++){
-                outputFilePathTrain = outputDirectoryPath + dir_path + "/" + index + "/" + "Train.arff";
-                outputFilePathTest = outputDirectoryPath + dir_path + "/" + index + "/" + "Test.arff";
-                new File(outputDirectoryPath + dir_path + "/" + index).mkdir();
+                outputFilePathTrain = outputDirectoryPath + dirPath + index + "/Train.arff";
+                outputFilePathTest = outputDirectoryPath + dirPath + index + "/Test.arff";
+                new File(outputDirectoryPath + dirPath + index).mkdir();
 
                 FileWriter fileWriterTrain = new FileWriter(outputFilePathTrain);
                 arffInit(fileWriterTrain, "Train");
@@ -85,14 +88,12 @@ public class WekaUtil {
 
     public static void main(String[] args) {
         String outputDirectoryPath = "Output/";
-        String inputFilePath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/BOOKKEEPERFilesInfo.csv";
         projName = "BK";
         releases = BK_RELEASES;
-        walkForward(outputDirectoryPath, inputFilePath);
+        walkForward(outputDirectoryPath, BK_CSV);
 
         projName = "SY";
         releases = SY_RELEASES;
-        inputFilePath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/milestone1/milestone1/SYNCOPEFilesInfo.csv";
-        walkForward(outputDirectoryPath, inputFilePath);
+        walkForward(outputDirectoryPath, SY_CSV);
     }
 }

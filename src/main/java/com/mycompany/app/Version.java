@@ -11,8 +11,8 @@ public class Version {
     private String extendedName; //for those releases which have the name like '4.0.0-something'
     private LocalDateTime date;
     private int verNum;
-    private ArrayList<Tickets> fixedDefects;
-    private Double prop_incremental;
+    private List<Tickets> fixedDefects;
+    private Double propIncremental;
     private Double defectProp;
 
     public Version(String name, LocalDateTime date, int vn) {
@@ -28,7 +28,7 @@ public class Version {
         this.date = date;
         this.verNum = vn;
         this.defectProp = 0.0;
-        this.prop_incremental = 0.0;
+        this.propIncremental = 0.0;
     }
 
     public Version(String name, LocalDateTime date) {
@@ -43,7 +43,7 @@ public class Version {
         }
         this.date = date;
         this.defectProp = 0.0;
-        this.prop_incremental = 0.0;
+        this.propIncremental = 0.0;
     }
 
     public String getName() {
@@ -58,8 +58,8 @@ public class Version {
         return date;
     }
 
-    public Double getProp_incremental() {
-        return prop_incremental;
+    public Double getPropIncremental() {
+        return propIncremental;
     }
 
     public Double getDefectProp() {
@@ -80,11 +80,11 @@ public class Version {
         return 1;
     }
 
-    public void setProp_incremental(Double prop_incremental) {
-        this.prop_incremental = prop_incremental;
+    public void setPropIncremental(Double propIncremental) {
+        this.propIncremental = propIncremental;
     }
 
-    public void setFixedDefects(ArrayList<Tickets> fixedDefects) {
+    public void setFixedDefects(List<Tickets> fixedDefects) {
         int c = 0;
         this.fixedDefects = fixedDefects;
 

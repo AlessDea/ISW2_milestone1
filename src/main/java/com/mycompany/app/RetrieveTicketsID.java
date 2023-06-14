@@ -15,7 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import static com.mycompany.app.Proportion.revisionProportionInc;
-import static com.mycompany.app.getReleaseInfo.relNames;
+import static com.mycompany.app.GetReleaseInfo.relNames;
 
 
 public class RetrieveTicketsID {
@@ -76,8 +76,8 @@ public class RetrieveTicketsID {
 
     }
 
-    public static Version getTheInjectedVer(ArrayList<Version> ivs){
-        if(ivs.size() > 0) {
+    public static Version getTheInjectedVer(List<Version> ivs){
+        if(!ivs.isEmpty()) {
             ivs.sort(new Comparator<Version>() {
                 @Override
                 public int compare(Version o1, Version o2) {
@@ -122,7 +122,10 @@ public class RetrieveTicketsID {
         Version iv;
         Version fv;
         Version ov;
-        int j = 0, i = 0, total = 1;
+        int j = 0;
+        int i = 0;
+        int total = 1;
+
         tickets = new ArrayList<>();
 
         DateTimeFormatter onlyDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -138,9 +141,6 @@ public class RetrieveTicketsID {
             JSONObject json = readJsonFromUrl(url);
             JSONArray issues = json.getJSONArray("issues");
 
-            /*for(Object o : issues)
-                System.out.println(o);*/
-
             total = json.getInt("total");
             for (; i < total && i < j; i++) {
                 //Iterate through each bug
@@ -148,13 +148,16 @@ public class RetrieveTicketsID {
                 String key = row.get("key").toString();
 
                 JSONObject fields = (JSONObject) row.get("fields");
-                LocalDateTime resDate = LocalDateTime.parse(fields.get("resolutiondate").toString().split("\\.")[0]); //non mi serve
                 LocalDateTime ovDate = LocalDateTime.parse(fields.get("created").toString().split("\\.")[0]); //opening version date
 
 
                 //prendi le opening versions
                 JSONArray injVer = fields.getJSONArray("versions");
                 ArrayList<Version> injectedVersions = new ArrayList<>();
+
+                JSONArray fixVer = fields.getJSONArray("fixVersions");
+                ArrayList<Version> fixedVersions = new ArrayList<>();
+
                 try {
                     for(int z = 0; z < injVer.length(); z++){
                         String name = injVer.getJSONObject(z).get("name").toString();
@@ -167,15 +170,9 @@ public class RetrieveTicketsID {
 
                         injectedVersions.add(v);
                     }
-                } catch (JSONException e) {
-                    continue;
-                }
 
 
 
-                JSONArray fixVer = fields.getJSONArray("fixVersions");
-                ArrayList<Version> fixedVersions = new ArrayList<>();
-                try {
                     for(int z = 0; z < fixVer.length(); z++){
                         String name = fixVer.getJSONObject(z).get("name").toString();
                         LocalDateTime date = LocalDate.parse(fixVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
@@ -193,51 +190,34 @@ public class RetrieveTicketsID {
 
                 /* conoscendo la data della opening devo prendermi il nome della release corrispondente */
                 ov = getTheOpeningVerName(ovDate);
-                if(ov == null)
-                    continue; //the ov belongs to the second half of the releases which have been discarded
+                if(ov != null) {
 
-                /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
-                * devo prendere la più piccola delle injected e la più grande delle fixed.
-                * */
-                if(injectedVersions.size() < 1) {
-                    iv = null; //injected version not present, must use proportion
-                }else {
-                    //get the oldest
-                    iv = getTheInjectedVer(injectedVersions);
+                    /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
+                     * devo prendere la più piccola delle injected e la più grande delle fixed.
+                     * */
+                    if (injectedVersions.isEmpty()) {
+                        iv = null; //injected version not present, must use proportion
+                    } else {
+                        //get the oldest
+                        iv = getTheInjectedVer(injectedVersions);
+                    }
+
+                    fv = getTheFixedVer(fixedVersions);
+                    if (fv != null && ov.getVerNum() <= fv.getVerNum()) { //without the fixed version the ticket is useless
+
+                        Tickets newTicket;
+                        if (iv != null) {
+                            newTicket = new Tickets(key, iv, fv, ov, relNames);
+                        } else {
+                            newTicket = new Tickets(key, fv, ov);
+                        }
+
+                        tickets.add(newTicket);
+                    }
                 }
-
-                fv = getTheFixedVer(fixedVersions);
-                if(fv == null){
-                    //without the fixed version the ticket is useless
-                    //System.out.println("continuing");
-                    continue;
-                }
-
-                if(ov.getVerNum() > fv.getVerNum()) //if the opening version is post fixed version then this tickets has wrong information
-                    continue;
-
-                Tickets newTicket;
-                if(iv != null){
-                    newTicket = new Tickets(key, iv, fv, ov, relNames);
-                }else{
-                    newTicket = new Tickets(key, fv, ov);
-                }
-
-                tickets.add(newTicket);
             }
         } while (i < total);
 
-
-        /*System.out.println("num of tickets: " + tickets.size());
-        for (Tickets t : tickets) {
-            System.out.println(t.getName());
-            if(t.getIv() != null)
-                System.out.println("\t\tINJECTED VERSION: " + t.getIv().getExtendedName() + " FIXED VERSION: " + t.getFv().getExtendedName());
-            else
-                System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
-            for(Version tmp : t.getAffectedVersions())
-                System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getExtendedName());
-        }*/
 
         //assign at each version its defects
         for(Version v : relNames) {
@@ -253,28 +233,15 @@ public class RetrieveTicketsID {
 
 
         for (Version v : relNames){
-            /* System.out.println(v.getVerNum() + " " + v.getExtendedName() + " number of defects: " + v.getFixedDefects().size());
-            System.out.println("Defect proportion: " + v.getDefectProp()); */
+
             if(v.getVerNum() == 1) {
-                v.setProp_incremental(v.getDefectProp()); //set the value o prop_incr as P (defectProp) because it's the first release
+                v.setPropIncremental(v.getDefectProp()); //set the value o prop_incr as P (defectProp) because it's the first release
                 continue; //for the first release the IVs are always 1, it's useless to calculate them and also it's useless to use them
             }else {
-                v.setProp_incremental(revisionProportionInc(v)); //calculate prop_incremental
-                //System.out.println("Proportion incremental: " + v.getProp_incremental());
+                v.setPropIncremental(revisionProportionInc(v)); //calculate prop_incremental
             }
             v.calcMissingIV(relNames); //calculate the missing IVs
 
-            /*for(Tickets t : v.getFixedDefects()){
-                if(t.getFv().getVerNum() == t.getIv().getVerNum())
-                    continue;
-                System.out.println(t.getName());
-                if(t.getIv() != null)
-                    System.out.println("\t\tINJECTED VERSION: " + t.getIv().getVerNum() + " " + t.getIv().getExtendedName() + " FIXED VERSION: " + t.getFv().getVerNum() + " " + t.getFv().getExtendedName());
-                else
-                    System.out.println("\t\tINJECTED VERSION: " + t.getIv() + " FIXED VERSION: " + t.getFv().getExtendedName());
-                for(Version tmp : t.getAffectedVersions())
-                    System.out.println("\t\t\t\tAFFECTED VERSIONS: " + tmp.getVerNum() + " " + tmp.getExtendedName());
-            }*/
         }
     }
 }

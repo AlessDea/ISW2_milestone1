@@ -176,7 +176,7 @@ public class RepoFile
         this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(this.getTouchedLOCs().size()-1));
     }
 
-    public ArrayList<Integer> getAvgSetSize() {
+    public List<Integer> getAvgSetSize() {
         return avgSetSize;
     }
 

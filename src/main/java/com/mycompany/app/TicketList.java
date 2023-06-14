@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 public class TicketList<T> extends ArrayList<Tickets> {
 
-    //ArrayList<Tickets> tickets = this;
     public boolean containsCommit(String id){
         for(Tickets t : this){
             if(t.getCommitId().equals(id))

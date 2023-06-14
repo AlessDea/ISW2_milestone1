@@ -19,8 +19,8 @@ import java.util.*;
 
 import static com.mycompany.app.RetrieveTicketsID.retrieveTickets;
 import static com.mycompany.app.RetrieveTicketsID.tickets;
-import static com.mycompany.app.getReleaseInfo.relNames;
-import static com.mycompany.app.getReleaseInfo.retrieveReleases;
+import static com.mycompany.app.GetReleaseInfo.relNames;
+import static com.mycompany.app.GetReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
@@ -40,6 +40,9 @@ public class FIlesRet {
     static final String TOUCHEDFIELD = "authors";
     static final String ADDEDFIELD = "authors";
     static final String REVISIONSFIELD = "revisions";
+
+    static final String BK_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
+    static final String SY_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
 
 
     public static void writeOnFile() {
@@ -141,7 +144,6 @@ public class FIlesRet {
                 e.printStackTrace();
             }
         }
-        System.out.println("File correctly written");
     }
 
     public static int iterateAndCompareFiles(String name, String path) {
@@ -156,8 +158,6 @@ public class FIlesRet {
     }
 
     public static void listRepositoryContents(Version rel, int releaseNumber) throws IOException, GitAPIException {
-
-        System.out.println(rel.getExtendedName());
 
         ObjectId head = repository.resolve(rel.getExtendedName());
         if (head == null)
@@ -415,6 +415,7 @@ public class FIlesRet {
         try {
             reader = repository.newObjectReader();
         } catch (Exception e) {
+            e.printStackTrace();
             throw e;
         }
 
@@ -618,8 +619,6 @@ public class FIlesRet {
 
     public static void retrieveMetrics() throws IOException, GitAPIException {
 
-        System.out.println(projName + " " + repoPath);
-
         int relNum = 0;
         int ret;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
@@ -669,7 +668,7 @@ public class FIlesRet {
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
         projName = "BOOKKEEPER";
-        repoPath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
+        repoPath = BK_PATH;
         retrieveMetrics();
 
 
@@ -678,7 +677,7 @@ public class FIlesRet {
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
         projName = "SYNCOPE";
-        repoPath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
+        repoPath = SY_PATH;
         retrieveMetrics();*/
 
     }

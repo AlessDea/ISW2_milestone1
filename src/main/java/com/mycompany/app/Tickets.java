@@ -14,7 +14,7 @@ public class Tickets {
     private Version fv;
     private Version ov;
     private String commitId;
-    private ArrayList<Version> affectedVersions; /* nome di tutte le versioni affette dal bug */
+    private List<Version> affectedVersions; /* nome di tutte le versioni affette dal bug */
 
     /* in caso non fosse presente IV allora bisogna applicare proportion per calcolarselo */
 
@@ -41,33 +41,33 @@ public class Tickets {
     public void calIvAndSetAv(List<Version> releases){
         /* ... The Injected Version is not available: use Proportion ... */
         int ivn = calcInjectedVersion(this);
-        iv = releases.get(ivn - 1);
-        this.affectedVersions = new ArrayList<>(releases.subList(releases.indexOf(iv), releases.indexOf(fv)));
+        this.iv = releases.get(ivn - 1);
+        this.affectedVersions = new ArrayList<>(releases.subList(releases.indexOf(this.iv), releases.indexOf(this.fv)));
     }
 
 
     public String getName() {
-        return name;
+        return this.name;
     }
 
     public Version getIv() {
-        return iv;
+        return this.iv;
     }
 
     public Version getFv() {
-        return fv;
+        return this.fv;
     }
 
     public Version getOv() {
-        return ov;
+        return this.ov;
     }
 
     public String getCommitId() {
-        return commitId;
+        return this.commitId;
     }
 
-    public ArrayList<Version> getAffectedVersions() {
-        return affectedVersions;
+    public List<Version> getAffectedVersions() {
+        return this.affectedVersions;
     }
 
     public void setName(String name) {
