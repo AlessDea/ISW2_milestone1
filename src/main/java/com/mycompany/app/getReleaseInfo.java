@@ -17,18 +17,16 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static com.mycompany.app.FIlesRet.projName;
-import static com.mycompany.app.FIlesRet.repo_path;
+import static com.mycompany.app.FIlesRet.repoPath;
 
 public class getReleaseInfo {
 
     public static HashMap<LocalDateTime, String> releaseNames;
     public static HashMap<LocalDateTime, String> releaseID;
     public static HashMap<String, LocalDateTime> releasesInfo = new HashMap<>();
-    public static ArrayList<LocalDateTime> jiraReleases;
-    public static Integer numVersions;
-    public static ArrayList<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
-    public static Repository repository;
-    public static ArrayList<String> gitReleases = new ArrayList<>();
+    public static List<LocalDateTime> jiraReleases;
+    public static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
+    public static List<String> gitReleases = new ArrayList<>();
 
 
 
@@ -39,7 +37,7 @@ public class getReleaseInfo {
         //String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         Repository repository = builder
-                .setGitDir(new File(repo_path)).readEnvironment()
+                .setGitDir(new File(repoPath)).readEnvironment()
                 .findGitDir().build();
 
 

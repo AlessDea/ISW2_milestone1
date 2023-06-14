@@ -24,35 +24,27 @@ import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
-    public static ArrayList<RepoFile> files;
+    static List<RepoFile> files = null;
 
-   /* public static String[] paths = {"/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw22-23/projects/bookkeeper/.git", "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git"};
-    public static String[] names = {"BOOKKEEPER", "SYNCOPE"};*/
+    static String repoPath = null;
+    static String projName = null;
 
-    /*public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
-    public static String projName = "BOOKKEEPER";*/
+    static List<Ref> tags = null;
+    static Repository repository = null;
 
-    /*public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
-    public static String projName = "SYNCOPE";*/
+    static TicketList<Tickets> buggyRelCommits = null;
 
-    public static String repo_path;
-    public static String projName;
+    static RevCommit theOldestCommit = null;
 
-    public static List<Ref> branches = new ArrayList<>();
-    public static List<Ref> tags;
-    public static Repository repository;
-
-    public static ArrayList<Release> releases = new ArrayList<>();
-
-    public static TicketList<Tickets> buggyRelCommits;
-
-    public static RevCommit theOldestCommit;
+    static final String AUTHORSFIELD = "authors";
+    static final String TOUCHEDFIELD = "authors";
+    static final String ADDEDFIELD = "authors";
+    static final String REVISIONSFIELD = "revisions";
 
 
     public static void writeOnFile() {
         FileWriter fileWriter = null;
         int numVersions;
-        int j;
         try {
             String outname = projName + "FilesInfo.csv";
             //Name of CSV for output
@@ -78,7 +70,7 @@ public class FIlesRet {
                         fileWriter.append(",");
 
                         //LOCs
-                        fileWriter.append(file.getLOCs().get(0).toString());
+                        fileWriter.append(file.getLocs().get(0).toString());
                         fileWriter.append(",");
 
                         //churn
@@ -106,7 +98,7 @@ public class FIlesRet {
                         fileWriter.append(",");
 
                         //Added LOCs
-                        fileWriter.append(file.getLOCAdded().get(0).toString());
+                        fileWriter.append(file.getLocAdded().get(0).toString());
                         fileWriter.append(",");
 
                         //Avg Set size
@@ -123,13 +115,13 @@ public class FIlesRet {
                         fileWriter.append("\n");
 
                         file.getPaths().remove(0);
-                        file.getLOCs().remove(0);
+                        file.getLocs().remove(0);
                         file.getChurn().remove(0);
                         file.getWeightedAge().remove(0);
                         file.getnAuth().remove(0);
                         file.getRevisions().remove(0);
                         file.getTouchedLOCs().remove(0);
-                        file.getLOCAdded().remove(0);
+                        file.getLocAdded().remove(0);
                         file.getAvgSetSize().remove(0);
                         file.getnFix().remove(0);
                         file.getBuggy().remove(0);
@@ -140,27 +132,23 @@ public class FIlesRet {
             }
 
         } catch (Exception e) {
-            System.out.println("Error in csv writer");
             e.printStackTrace();
         } finally {
             try {
                 fileWriter.flush();
                 fileWriter.close();
             } catch (IOException e) {
-                System.out.println("Error while flushing/closing fileWriter !!!");
                 e.printStackTrace();
             }
         }
         System.out.println("File correctly written");
     }
 
-    public static int iterateAndCompareFiles(String name, String path, int relNum) {
+    public static int iterateAndCompareFiles(String name, String path) {
         for (RepoFile f : files) {
-            if (f.equals(name)) {
-                if (f.getPaths().size() > 0) {
-                    if (path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
-                        return files.indexOf(f);
-                    }
+            if (f.equals(name) && !f.getPaths().isEmpty()) {
+                if (path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
+                    return files.indexOf(f);
                 }
             }
         }
@@ -175,7 +163,6 @@ public class FIlesRet {
         if (head == null)
             return;
 
-        //System.out.println(head.getName());
         // a RevWalk allows to walk over commits based on some filtering that is defined
         RevWalk walk = new RevWalk(repository);
 
@@ -198,8 +185,7 @@ public class FIlesRet {
 
                 tkns = treeWalk.getPathString().split("/");
                 if (!treeWalk.getPathString().contains("/test")) {
-                    //System.out.println("Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
-                    ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString(), releaseNumber - 1); //fondamentalmente va bene solo se ha lo stesso nome
+                    ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString()); //fondamentalmente va bene solo se ha lo stesso nome
 
                     if (ret >= 0) {
 
@@ -212,25 +198,24 @@ public class FIlesRet {
 
                         if (releaseNumber > 1) {
                             Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
-                            files.get(ret).insertAuth(ar.get("authors"));
-                            files.get(ret).insertRevisions(ar.get("revisions"));
+                            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
+                            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
 
                             Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
-                            files.get(ret).insertTouchedLOCs(r.get("touched"));
-                            files.get(ret).insertLOCAdded(r.get("added"));
+                            files.get(ret).insertTouchedLOCs(r.get(TOUCHEDFIELD));
+                            files.get(ret).insertLOCAdded(r.get(ADDEDFIELD));
                         } else {
                             Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
-                            files.get(ret).insertAuth(ar.get("authors"));
-                            files.get(ret).insertRevisions(ar.get("revisions"));
+                            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
+                            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
 
                             //è la prima release, quindi loc touched e anche le added sono tutte le loc
-                            files.get(ret).insertTouchedLOCs(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
-                            files.get(ret).insertLOCAdded(files.get(ret).getLOCs().get(files.get(ret).getLOCs().size() - 1));
+                            files.get(ret).insertTouchedLOCs(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
+                            files.get(ret).insertLOCAdded(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
                         }
                         files.get(ret).insertWeightedAge(releaseNumber);
 
                     } else {
-                        //System.out.println("else: Release Number: " + releaseNumber + " name: " + treeWalk.getPathString());
                         RepoFile rf = new RepoFile(tkns[tkns.length - 1]);
                         rf.insertRelease(rel);
                         rf.insertPath(treeWalk.getPathString());
@@ -242,20 +227,20 @@ public class FIlesRet {
 
                         if (releaseNumber > 1) {
                             Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
-                            rf.insertAuth(ar.get("authors"));
-                            rf.insertRevisions(ar.get("revisions"));
+                            rf.insertAuth(ar.get(AUTHORSFIELD));
+                            rf.insertRevisions(ar.get(REVISIONSFIELD));
 
                             Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
-                            rf.insertTouchedLOCs(r.get("touched"));
-                            rf.insertLOCAdded(r.get("added"));
+                            rf.insertTouchedLOCs(r.get(TOUCHEDFIELD));
+                            rf.insertLOCAdded(r.get(ADDEDFIELD));
                         } else {
                             Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
-                            rf.insertAuth(ar.get("authors"));
-                            rf.insertRevisions(ar.get("revisions"));
+                            rf.insertAuth(ar.get(AUTHORSFIELD));
+                            rf.insertRevisions(ar.get(REVISIONSFIELD));
 
                             //è la prima release, quindi loc touched e anche le added sono tutte le loc
-                            rf.insertTouchedLOCs(rf.getLOCs().get(0));
-                            rf.insertLOCAdded(rf.getLOCs().get(0));
+                            rf.insertTouchedLOCs(rf.getLocs().get(0));
+                            rf.insertLOCAdded(rf.getLocs().get(0));
                         }
                         rf.insertWeightedAge(releaseNumber);
 
@@ -268,7 +253,7 @@ public class FIlesRet {
 
 
 
-    public static int countLOCs(String filePath, String release) throws IOException, GitAPIException {
+    public static int countLOCs(String filePath, String release) throws IOException {
         RevWalk walk = new RevWalk(repository);
         ObjectId headId = repository.resolve(release);
         RevCommit commit = walk.parseCommit(headId);
@@ -278,10 +263,11 @@ public class FIlesRet {
         treeWalk.setRecursive(true);
         treeWalk.setFilter(PathFilter.create(filePath));
         int lines = 0;
+        BufferedReader reader = null;
         while (treeWalk.next()) {
             ObjectId objectId = treeWalk.getObjectId(0);
             ObjectLoader loader = repository.open(objectId);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(loader.openStream()));
+            reader = new BufferedReader(new InputStreamReader(loader.openStream()));
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.trim().isEmpty()) {
@@ -289,6 +275,8 @@ public class FIlesRet {
                 }
             }
         }
+        assert reader != null;
+        reader.close();
         return lines;
     }
 
@@ -343,9 +331,8 @@ public class FIlesRet {
             }
 
         }
-        //System.out.println("Authors: " + nAuth + " Revisions: " + nComm);
-        ret.put("authors", nAuth);
-        ret.put("revisions", nComm);
+        ret.put(AUTHORSFIELD, nAuth);
+        ret.put(REVISIONSFIELD, nComm);
         return ret;
     }
 
@@ -356,15 +343,11 @@ public class FIlesRet {
      * - the number of added LOCs
      * These values are put in a Map which is returned.
      */
-
-    /* OK */
-    public static Map<String, Integer> locTouched(Repository repository, String startRel, String endRel, String fileName) throws GitAPIException, IOException {
-
-        //System.out.println("LOC otuched: " + startRel + " " + endRel);
+    public static Map<String, Integer> locTouched(Repository repository, String startRel, String endRel, String fileName) throws IOException {
 
         RevWalk walk = new RevWalk(repository);
-        int LOCTouched = 0;
-        int LOCAdded = 0;
+        int locTouched = 0;
+        int locAdded = 0;
 
         Map<String, Integer> ret = new HashMap<>();
 
@@ -375,8 +358,6 @@ public class FIlesRet {
         RevCommit start = walk.parseCommit(startCommit);
         RevCommit end = walk.parseCommit(endCommit);
 
-        /*System.out.println("Start commit: " + start.getName() + " -> " + start.abbreviate(6).name());
-        System.out.println("End commit: " + end.getName() + " -> "+ end.abbreviate(6).name());*/
 
         // Obtain tree iterators to traverse the tree of the old/new commit
         ObjectReader reader = repository.newObjectReader();
@@ -392,38 +373,32 @@ public class FIlesRet {
         List<DiffEntry> entries = diffFormatter.scan(oldTreeIter, newTreeIter);
 
         for (DiffEntry entry : entries) {
-            if (!entry.getNewPath().equals(fileName))
-                continue;
-
-            //System.out.println(entry.getNewPath());
-
-            FileHeader fileHeader = diffFormatter.toFileHeader(entry);
-            ArrayList<Edit> edits = fileHeader.toEditList();
+            if (entry.getNewPath().equals(fileName)) {
+                FileHeader fileHeader = diffFormatter.toFileHeader(entry);
+                ArrayList<Edit> edits = fileHeader.toEditList();
 
 
-            int locsA = 0, locsD = 0; // mi servono per mantenere le LOCs added e deleted
-            for (Edit e : edits) {
+                int locsA = 0;
+                int locsD = 0; // mi servono per mantenere le LOCs added e deleted
+                for (Edit e : edits) {
 
+                    if (e.toString().contains("INSERT")) {
+                        locsA += e.getLengthB();
 
-                //System.out.println(e);
+                    } else if (e.toString().contains("DELETE")) {
+                        locsD += e.getLengthA();
 
-                if (e.toString().contains("INSERT")) {
-                    locsA += e.getLengthB();
-
-                } else if (e.toString().contains("DELETE")) {
-                    locsD += e.getLengthA();
-
+                    }
                 }
+                locTouched = (locsA + locsD);
+                locAdded = locsA;
+                break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quindi se si arriva qui quelle del file d'interesse sono state controllate tutte
             }
-            LOCTouched = (locsA + locsD);
-            LOCAdded = locsA;
-            break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quindi se si arriva qui quelle del file d'interesse sono state controllate tutte
 
         }
-        //System.out.println("Total LOCs touched: " + resA - resD);
 
-        ret.put("touched", LOCTouched);
-        ret.put("added", LOCAdded);
+        ret.put(TOUCHEDFIELD, locTouched);
+        ret.put(ADDEDFIELD, locAdded);
         return ret;
     }
 
@@ -436,7 +411,13 @@ public class FIlesRet {
         RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
 
-        ObjectReader reader = repository.newObjectReader();
+        ObjectReader reader;
+        try {
+            reader = repository.newObjectReader();
+        } catch (Exception e) {
+            throw e;
+        }
+
         CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
         CanonicalTreeParser oldTreeIter = new CanonicalTreeParser();
 
@@ -473,7 +454,6 @@ public class FIlesRet {
 
         ArrayList<String> filesSet = new ArrayList<>();
 
-        int commitsNumber = 0;  // numero di commit in cui è stata modificata una classe
         for (RevCommit commit : relCommits) {
             if (relCommits.indexOf(commit) == relCommits.size() - 1)
                 break;
@@ -493,7 +473,7 @@ public class FIlesRet {
                     filesSet.add(entry.getNewPath());
             }
         }
-        //System.out.println("Average set size for " + file + " " + filesSet.size()/relCommits.size());
+        reader.close();
         return filesSet.size() / relCommits.size();
     }
 
@@ -507,7 +487,6 @@ public class FIlesRet {
      */
 
     public static void retrieveTicketsFromCommit(Repository repository) throws IOException, GitAPIException {
-        RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
         ArrayList<RevCommit> commitsMsgs = new ArrayList<>();
         for (RevCommit commit : git.log().all().call()) {
@@ -590,7 +569,7 @@ public class FIlesRet {
                 if (f.getPaths().get(0).equals(file.getPaths().get(0))) { //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
                     /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
                      * all'affected versions presenti in t */
-                    ArrayList<Version> fileRels = f.getReleases();
+                    List<Version> fileRels = f.getReleases();
                     for (Tickets t : bugs) {
                         if (t.getAffectedVersions().size() > 1) {
                             int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
@@ -634,29 +613,24 @@ public class FIlesRet {
         }
 
         theOldestCommit = c;
-        //System.out.println(c.getName() + " " + c.getCommitTime() + " " + c.getShortMessage());
     }
 
 
-    /*public static void main(String[] args) throws IOException, GitAPIException {*/
     public static void retrieveMetrics() throws IOException, GitAPIException {
 
-        System.out.println(projName + " " + repo_path);
+        System.out.println(projName + " " + repoPath);
 
         int relNum = 0;
         int ret;
         FileRepositoryBuilder builder = new FileRepositoryBuilder();
         repository = builder
-                .setGitDir(new File(repo_path)).readEnvironment()
+                .setGitDir(new File(repoPath)).readEnvironment()
                 .findGitDir().build();
 
 
         getTheOldestCommit(repository); // prendi l'id del primo commit di sempre
 
         retrieveReleases(); // prendi la lista di tutte le release: vengono filtrate quelle di jira con quelle prese dai tag di git
-
-
-        long start = System.currentTimeMillis();
 
 
         // per ogni release (tag) lista i file
@@ -687,30 +661,25 @@ public class FIlesRet {
         // Scrivi il file csv
         writeOnFile();
 
-        long end = System.currentTimeMillis();
-
-        System.out.println("Elapsed time: " + (end - start) / 1000.2f);
-
         repository.close();
-
     }
 
     public static void main(String[] args) throws IOException, GitAPIException {
-        /*files = new ArrayList<>();
-        tags = new ArrayList<>();
-        buggyRelCommits = new TicketList<>();
-        projName = "BOOKKEEPER";
-        repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
-        retrieveMetrics();*/
-
-
-
         files = new ArrayList<>();
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
-        projName = "SYNCOPE";
-        repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
+        projName = "BOOKKEEPER";
+        repoPath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
         retrieveMetrics();
+
+
+
+        /*files = new ArrayList<>();
+        tags = new ArrayList<>();
+        buggyRelCommits = new TicketList<>();
+        projName = "SYNCOPE";
+        repoPath = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
+        retrieveMetrics();*/
 
     }
 

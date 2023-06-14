@@ -1,6 +1,5 @@
 package com.mycompany.app;
 
-import java.util.ArrayList;
 
 import static com.mycompany.app.getReleaseInfo.relNames;
 
@@ -19,6 +18,8 @@ import static com.mycompany.app.getReleaseInfo.relNames;
  */
 
 public class Proportion {
+
+    private Proportion() {}
 
     /**
      * La proportion di ogni release ce l'ho dentro all'oggetto Version ed inoltre nell'oggetto Version c'è anche

@@ -1,6 +1,5 @@
 package com.mycompany.app;
 
-import org.eclipse.jgit.api.errors.GitAPIException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -13,16 +12,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
-import static com.mycompany.app.FIlesRet.projName;
 import static com.mycompany.app.Proportion.revisionProportionInc;
 import static com.mycompany.app.getReleaseInfo.relNames;
-import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 
 public class RetrieveTicketsID {
 
-    public static ArrayList<Tickets> tickets;
+    static List<Tickets> tickets;
+
+    private RetrieveTicketsID() {}
 
     private static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -38,8 +38,7 @@ public class RetrieveTicketsID {
         try {
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             String jsonText = readAll(rd);
-            JSONArray json = new JSONArray(jsonText);
-            return json;
+            return new JSONArray(jsonText);
         } finally {
             is.close();
         }
@@ -50,8 +49,7 @@ public class RetrieveTicketsID {
         try {
             BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
             String jsonText = readAll(rd);
-            JSONObject json = new JSONObject(jsonText);
-            return json;
+            return new JSONObject(jsonText);
         } finally {
             is.close();
         }
@@ -222,7 +220,7 @@ public class RetrieveTicketsID {
                 if(iv != null){
                     newTicket = new Tickets(key, iv, fv, ov, relNames);
                 }else{
-                    newTicket = new Tickets(key, fv, ov, relNames);
+                    newTicket = new Tickets(key, fv, ov);
                 }
 
                 tickets.add(newTicket);

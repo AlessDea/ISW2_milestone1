@@ -2,6 +2,7 @@ package com.mycompany.app;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.mycompany.app.Proportion.defectProportionInc;
 
@@ -69,20 +70,8 @@ public class Version {
         return verNum;
     }
 
-    public ArrayList<Tickets> getFixedDefects() {
-        return fixedDefects;
-    }
-
     public void setName(String name) {
         this.name = name;
-    }
-
-    public void setExtendedName(String extendedName) {
-        this.extendedName = extendedName;
-    }
-
-    public void setDate(LocalDateTime date) {
-        this.date = date;
     }
 
     public int compare(Version otherVer){
@@ -93,14 +82,6 @@ public class Version {
 
     public void setProp_incremental(Double prop_incremental) {
         this.prop_incremental = prop_incremental;
-    }
-
-    public void setDefectProp(Double defectProp) {
-        this.defectProp = defectProp;
-    }
-
-    public void setVerNum(int verNum) {
-        this.verNum = verNum;
     }
 
     public void setFixedDefects(ArrayList<Tickets> fixedDefects) {
@@ -121,7 +102,7 @@ public class Version {
 
     }
 
-    public void calcMissingIV(ArrayList<Version> releases){
+    public void calcMissingIV(List<Version> releases){
         for(Tickets t : fixedDefects){
             if(t.getIv() == null){
                 t.calIvAndSetAv(releases);

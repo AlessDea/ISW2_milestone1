@@ -1,9 +1,9 @@
 package com.mycompany.app;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import static com.mycompany.app.Proportion.calcInjectedVersion;
-import static com.mycompany.app.getReleaseInfo.relNames;
 
 /**
  * Ticket per un determinato Bug
@@ -20,7 +20,7 @@ public class Tickets {
 
 
     //releases should be relNames but for make the class independent of the entire project, I prefer to pass it as argument
-    public Tickets(String name, Version iv, Version fv, Version ov, ArrayList<Version> releases) {
+    public Tickets(String name, Version iv, Version fv, Version ov, List<Version> releases) {
         this.name = name;
         this.iv = iv;
         this.fv = fv;
@@ -29,7 +29,7 @@ public class Tickets {
 
     }
 
-    public Tickets(String name, Version fv, Version ov, ArrayList<Version> releases) {
+    public Tickets(String name, Version fv, Version ov) {
         this.name = name;
         this.fv = fv;
         this.ov = ov;
@@ -38,7 +38,7 @@ public class Tickets {
 
     }
 
-    public void calIvAndSetAv(ArrayList<Version> releases){
+    public void calIvAndSetAv(List<Version> releases){
         /* ... The Injected Version is not available: use Proportion ... */
         int ivn = calcInjectedVersion(this);
         iv = releases.get(ivn - 1);
@@ -74,24 +74,8 @@ public class Tickets {
         this.name = name;
     }
 
-    public void setIv(Version iv) {
-        this.iv = iv;
-    }
-
-    public void setFv(Version fv) {
-        this.fv = fv;
-    }
-
-    public void setOv(Version ov) {
-        this.ov = ov;
-    }
-
     public void setCommitId(String commitId) {
         this.commitId = commitId;
-    }
-
-    public void setAffectedVersions(ArrayList<Version> affectedVersions) {
-        this.affectedVersions = affectedVersions;
     }
 
 }

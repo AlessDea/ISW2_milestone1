@@ -1,6 +1,7 @@
 package com.mycompany.app;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class RepoFile
 {
@@ -8,13 +9,13 @@ public class RepoFile
     private int appearances;
     private ArrayList<Version> releases;
     private ArrayList<String> paths;
-    private ArrayList<Integer> LOCs;
+    private ArrayList<Integer> locs;
     private ArrayList<Integer> touchedLOCs; /* between two release : added + deleted */
     private ArrayList<Integer> churn; /* between two release : |added - deleted| -> questo può essere fatto facendo la differenza tra i LOC delle release da verificare*/
     private int revisionFirstAppearance;
     private ArrayList<Integer> nAuth;
     private ArrayList<Integer> revisions; //number of revisions
-    private ArrayList<Integer> LOCAdded;
+    private ArrayList<Integer> locAdded;
     private ArrayList<Boolean> buggy;
     private ArrayList<Integer> nFix; // number of fix in each release
     private ArrayList<Integer> weightedAge; //Age of release wighted by LoC touched
@@ -26,12 +27,12 @@ public class RepoFile
         this.appearances = 1;
         this.releases = new ArrayList<>();
         this.paths = new ArrayList<>();
-        this.LOCs = new ArrayList<>();
+        this.locs = new ArrayList<>();
         this.touchedLOCs = new ArrayList<>();
         this.churn = new ArrayList<>();
         this.nAuth = new ArrayList<>();
         this.revisions = new ArrayList<>();
-        this.LOCAdded = new ArrayList<>();
+        this.locAdded = new ArrayList<>();
         this.buggy = new ArrayList<>();
         this.weightedAge = new ArrayList<>();
         this.nFix = new ArrayList<>();
@@ -49,9 +50,7 @@ public class RepoFile
 
 
     public Boolean equals(String name){
-        if(this.getName().equals(name))
-            return true;
-        return false;
+        return this.getName().equals(name);
     }
 
     public void insertRelease(Version release) {
@@ -59,7 +58,7 @@ public class RepoFile
         this.buggy.add(false); // all'inizio le considero tutte non buggy
     }
 
-    public ArrayList<Version> getReleases() {
+    public List<Version> getReleases() {
         return releases;
     }
 
@@ -67,23 +66,23 @@ public class RepoFile
         this.paths.add(path);
     }
 
-    public ArrayList<String> getPaths() {
+    public List<String> getPaths() {
         return paths;
     }
 
     public void insertLOCs(int l) {
-        this.LOCs.add(l);
+        this.locs.add(l);
     }
 
-    public ArrayList<Integer> getLOCs() {
-        return LOCs;
+    public List<Integer> getLocs() {
+        return locs;
     }
 
     public void insertTouchedLOCs(Integer t) {
         this.touchedLOCs.add(t);
     }
 
-    public ArrayList<Integer> getTouchedLOCs() {
+    public List<Integer> getTouchedLOCs() {
         return touchedLOCs;
     }
 
@@ -94,18 +93,18 @@ public class RepoFile
     * @param c index of the current release
     * */
     public void insertChurn(int c) {
-        int churn;
+        int chrn;
         if(c == 0){ //first release -> added - deleted = LOCs
-            churn = this.LOCs.get(c);
+            chrn = this.locs.get(c);
         }else{
-            churn = Math.abs(this.LOCs.get(c) - this.LOCs.get(c-1));
+            chrn = Math.abs(this.locs.get(c) - this.locs.get(c-1));
         }
 
 
-        this.churn.add(churn);
+        this.churn.add(chrn);
     }
 
-    public ArrayList<Integer> getChurn() {
+    public List<Integer> getChurn() {
         return churn;
     }
 
@@ -121,7 +120,7 @@ public class RepoFile
         this.nAuth.add(nauth);
     }
 
-    public ArrayList<Integer> getnAuth() {
+    public List<Integer> getnAuth() {
         return nAuth;
     }
 
@@ -129,7 +128,7 @@ public class RepoFile
         this.revisions.add(revision);
     }
 
-    public ArrayList<Integer> getRevisions() {
+    public List<Integer> getRevisions() {
         return this.revisions;
     }
 
@@ -145,15 +144,15 @@ public class RepoFile
         this.appearances -= 1;
     }
 
-    public void insertLOCAdded(int LOCAdded) {
-        this.LOCAdded.add(LOCAdded);
+    public void insertLOCAdded(int lAdded) {
+        this.locAdded.add(lAdded);
     }
 
-    public ArrayList<Integer> getLOCAdded() {
-        return LOCAdded;
+    public List<Integer> getLocAdded() {
+        return locAdded;
     }
 
-    public ArrayList<Boolean> getBuggy() {
+    public List<Boolean> getBuggy() {
         return buggy;
     }
 
@@ -161,7 +160,7 @@ public class RepoFile
         this.buggy.add(buggy);
     }
 
-    public ArrayList<Integer> getnFix() {
+    public List<Integer> getnFix() {
         return nFix;
     }
 
@@ -169,12 +168,11 @@ public class RepoFile
         this.nFix.add(nFix);
     }
 
-    public ArrayList<Integer> getWeightedAge() {
+    public List<Integer> getWeightedAge() {
         return weightedAge;
     }
 
     public void insertWeightedAge(int curRel) {
-        //System.out.println("Loc touched array size: " + this.getTouchedLOCs().size());
         this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(this.getTouchedLOCs().size()-1));
     }
 
