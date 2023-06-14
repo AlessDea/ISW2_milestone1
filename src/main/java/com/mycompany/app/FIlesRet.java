@@ -24,24 +24,27 @@ import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
-    public static ArrayList<RepoFile> files = new ArrayList<>();
+    public static ArrayList<RepoFile> files;
 
-   /* public static String[] paths = {"/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git", "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git"};
+   /* public static String[] paths = {"/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw22-23/projects/bookkeeper/.git", "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git"};
     public static String[] names = {"BOOKKEEPER", "SYNCOPE"};*/
 
-    /*public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/bookkeeper/.git";
+    /*public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
     public static String projName = "BOOKKEEPER";*/
 
-    public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw 22-23/projects/syncope/.git";
-    public static String projName = "SYNCOPE";
+    /*public static String repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
+    public static String projName = "SYNCOPE";*/
+
+    public static String repo_path;
+    public static String projName;
 
     public static List<Ref> branches = new ArrayList<>();
-    public static List<Ref> tags = new ArrayList<>();
+    public static List<Ref> tags;
     public static Repository repository;
 
     public static ArrayList<Release> releases = new ArrayList<>();
 
-    public static TicketList<Tickets> buggyRelCommits = new TicketList<>();
+    public static TicketList<Tickets> buggyRelCommits;
 
     public static RevCommit theOldestCommit;
 
@@ -263,9 +266,8 @@ public class FIlesRet {
         }
     }
 
-    /**
-     *
-     */
+
+
     public static int countLOCs(String filePath, String release) throws IOException, GitAPIException {
         RevWalk walk = new RevWalk(repository);
         ObjectId headId = repository.resolve(release);
@@ -363,10 +365,7 @@ public class FIlesRet {
         RevWalk walk = new RevWalk(repository);
         int LOCTouched = 0;
         int LOCAdded = 0;
-        int bA;
-        int eA;
-        int bB;
-        int eB;
+
         Map<String, Integer> ret = new HashMap<>();
 
         // get the commit id
@@ -392,7 +391,6 @@ public class FIlesRet {
         diffFormatter.setContext(0);
         List<DiffEntry> entries = diffFormatter.scan(oldTreeIter, newTreeIter);
 
-        // Print the contents of the DiffEntries
         for (DiffEntry entry : entries) {
             if (!entry.getNewPath().equals(fileName))
                 continue;
@@ -405,32 +403,20 @@ public class FIlesRet {
 
             int locsA = 0, locsD = 0; // mi servono per mantenere le LOCs added e deleted
             for (Edit e : edits) {
-                bA = e.getBeginA();
-                eA = e.getEndA();
-                bB = e.getBeginB();
-                eB = e.getEndB();
+
 
                 //System.out.println(e);
 
                 if (e.toString().contains("INSERT")) {
-                    locsA += eB - bB;
+                    locsA += e.getLengthB();
 
                 } else if (e.toString().contains("DELETE")) {
-                    locsD += eA - eB;
+                    locsD += e.getLengthA();
 
-                } else { //"REPLACE"
-                    if (eA < eB) {
-                        // es. A(26,27) B(26,29) -> added = (eB - eA) = 29 - 27 = 2 ; deleted = (eA - bA) = 27 - 26 = 1;
-                        locsA += (eB - eA); //righe aggiunte
-                        locsD += (eA - bA); //righe tolte
-                    } else {
-                        // es. A(26,29) B(26,27) -> (eA - eB) = 29 - 27 = 2
-                        locsD += (eA - eB);
-                    }
                 }
             }
-            LOCTouched += locsA + locsD;
-            LOCAdded += locsA;
+            LOCTouched = (locsA + locsD);
+            LOCAdded = locsA;
             break; //ogni DiffEntry corrisponde alle modifiche di un singolo file, quindi se si arriva qui quelle del file d'interesse sono state controllate tutte
 
         }
@@ -616,7 +602,7 @@ public class FIlesRet {
                             }
                         }
                     }
-                    break; //il file una volta compare nella lista
+                    break; //il file una volta sola compare nella lista
                 }
             }
         }
@@ -652,7 +638,8 @@ public class FIlesRet {
     }
 
 
-    public static void main(String[] args) throws IOException, GitAPIException {
+    /*public static void main(String[] args) throws IOException, GitAPIException {*/
+    public static void retrieveMetrics() throws IOException, GitAPIException {
 
         System.out.println(projName + " " + repo_path);
 
@@ -707,4 +694,25 @@ public class FIlesRet {
         repository.close();
 
     }
+
+    public static void main(String[] args) throws IOException, GitAPIException {
+        /*files = new ArrayList<>();
+        tags = new ArrayList<>();
+        buggyRelCommits = new TicketList<>();
+        projName = "BOOKKEEPER";
+        repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
+        retrieveMetrics();*/
+
+
+
+        files = new ArrayList<>();
+        tags = new ArrayList<>();
+        buggyRelCommits = new TicketList<>();
+        projName = "SYNCOPE";
+        repo_path = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
+        retrieveMetrics();
+
+    }
+
+
 }

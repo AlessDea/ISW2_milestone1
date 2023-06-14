@@ -10,28 +10,7 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="/ExampleOfOutputD1.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="/QPIDVersionInfo.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
         <entry key="/SYNCOPEFilesInfo.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="/SYNCOPEVersionInfo.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

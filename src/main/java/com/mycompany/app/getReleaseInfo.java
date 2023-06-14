@@ -108,8 +108,12 @@ public class getReleaseInfo {
         retrieveTags();
 
 
-        /* toglie le release che non si trovano su git */
+        /* togli le release che non si trovano su git */
         for(String rel : tmp){
+
+            if(rel.equals("refs/tags/syncope-2.0.0-M1")) //exclude it because causes problems
+                continue;
+
             if(gitReleases.contains(rel)) {
                 if(releasesInfo.get(rel) != null) {
                     //System.out.println(rel + " : " + releasesInfo.get(rel));

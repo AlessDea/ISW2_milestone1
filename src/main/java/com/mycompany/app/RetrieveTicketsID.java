@@ -22,7 +22,7 @@ import static com.mycompany.app.getReleaseInfo.retrieveReleases;
 
 public class RetrieveTicketsID {
 
-    public static ArrayList<Tickets> tickets = new ArrayList<>();
+    public static ArrayList<Tickets> tickets;
 
     private static String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
@@ -125,6 +125,7 @@ public class RetrieveTicketsID {
         Version fv;
         Version ov;
         int j = 0, i = 0, total = 1;
+        tickets = new ArrayList<>();
 
         DateTimeFormatter onlyDateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
