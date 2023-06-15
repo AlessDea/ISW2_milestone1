@@ -118,11 +118,11 @@ public class GetReleaseInfo {
 
 
 
-        // scarta l'ultimo 50% delle release
+        /*// scarta l'ultimo 50% delle release
         int len = relNames.size();
         for(int j =  len - 1; j > len/2; j--){
             relNames.remove(j);
-        }
+        }*/
 
 
     }

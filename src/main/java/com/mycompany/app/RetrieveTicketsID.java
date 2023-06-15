@@ -235,7 +235,7 @@ public class RetrieveTicketsID {
         for (Version v : relNames){
 
             if(v.getVerNum() == 1) {
-                v.setPropIncremental(v.getDefectProp()); //set the value o prop_incr as P (defectProp) because it's the first release
+                v.setPropIncremental(v.getDefectProp()); //set the value of prop_incr as P (defectProp) because it's the first release
                 continue; //for the first release the IVs are always 1, it's useless to calculate them and also it's useless to use them
             }else {
                 v.setPropIncremental(revisionProportionInc(v)); //calculate prop_incremental

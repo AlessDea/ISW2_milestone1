@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="milestone1" />
+        <module name="ISW2_milestone1" />
       </profile>
     </annotationProcessing>
   </component>

@@ -21,7 +21,7 @@ public class Proportion {
 
     private Proportion() {}
 
-    /**
+    /*
      * La proportion di ogni release ce l'ho dentro all'oggetto Version ed inoltre nell'oggetto Version c'è anche
      * la lista dei defect
      */

@@ -12,6 +12,7 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
+import utils.ProjectsUtils;
 
 
 import java.io.*;
@@ -41,9 +42,9 @@ public class FIlesRet {
     static final String ADDEDFIELD = "authors";
     static final String REVISIONSFIELD = "revisions";
 
-    static final String BK_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
+    /*static final String BK_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
     static final String SY_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
-
+*/
 
     public static void writeOnFile() {
         FileWriter fileWriter = null;
@@ -133,8 +134,8 @@ public class FIlesRet {
                     }
                 }
             }
-            fileWriter.flush();
-            fileWriter.close();
+            /*fileWriter.flush();
+            fileWriter.close();*/
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -148,7 +149,7 @@ public class FIlesRet {
     }
 
     public static int iterateAndCompareFiles(String name, String path) {
-        if(name != null)
+        if(name == null)
             return -1;
         for (RepoFile f : files) {
             if (f.equals(name) && !f.getPaths().isEmpty()) {
@@ -496,7 +497,6 @@ public class FIlesRet {
         ArrayList<RevCommit> commitsMsgs = new ArrayList<>();
         for (RevCommit commit : git.log().all().call()) {
             commitsMsgs.add(commit);
-            //System.out.println(commit.getName() + " " + commit.getShortMessage());
         }
 
         //dai tag presi da jira filtra tutti i commit di git mantenendo solo quelli che contengono un ticket
@@ -505,9 +505,7 @@ public class FIlesRet {
                 if (c.getShortMessage().contains(t.getName())) {
                     t.setCommitId(c.getName()); //aggiungo il commitID con cui è stato fatto quel fix
                     buggyRelCommits.add(t);
-                    //System.out.println(t.getName() + " " + t.getCommitId());
                     break; //check the next commit
-                    //System.out.println(c.getName() + " " + c.getShortMessage());
                 }
             }
         }
@@ -547,7 +545,7 @@ public class FIlesRet {
         if (prevRelCommit != null) {
             log = git.log().addRange(prevRelCommit, curRelCommit);
         } else {
-            log = git.log().addRange(theOldestCommit, curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine.
+            log = git.log().addRange(theOldestCommit, curRelCommit); //add prende lo start commit e quindi fa da la fino alla fine, ecco perchè c'è add range.
         }
 
         Iterable<RevCommit> commits = log.addPath(file.getPaths().get(0)).call();
@@ -570,27 +568,32 @@ public class FIlesRet {
 
         if (nFix > 0) {
             /* devo andare a settare a buggy il file in tutte le release precedenti fino alla INJECTED VERSION (che su jira corrisponde alla AFFECTED VERSION) */
+
             for (RepoFile f : files) { //scorro tutti i file e arrivo fino a quello d'interesse
+
                 if (f.getPaths().get(0).equals(file.getPaths().get(0))) { //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
                     /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
                      * all'affected versions presenti in t */
                     List<Version> fileRels = f.getReleases();
                     for (Tickets t : bugs) {
+
                         if (t.getAffectedVersions().size() > 1) {
                             int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
-                            if (firstAffRel < 0)
+                            if (firstAffRel < 0) {
                                 continue; //doesn't find the release
+                            }
                             int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size() - 1)) + 1;
                             for (int i = firstAffRel; i < lastAffRel; i++) {
                                 f.getBuggy().set(i, true);
+
                             }
+
                         }
                     }
                     break; //il file una volta sola compare nella lista
                 }
             }
         }
-
         //ritorno il numero di commit che hanno fixato il file, se è pari a 0 allora non è stato fixato
         return nFix;
 
@@ -660,6 +663,11 @@ public class FIlesRet {
             }
         }
 
+        // scarta l'ultimo 50% delle release
+        int len = relNames.size();
+        for(int j =  len - 1; j > len/2; j--){
+            relNames.remove(j);
+        }
 
         // Scrivi il file csv
         writeOnFile();
@@ -668,21 +676,24 @@ public class FIlesRet {
     }
 
     public static void main(String[] args) throws IOException, GitAPIException {
+
+        ProjectsUtils.getInstance();
+
         files = new ArrayList<>();
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
-        projName = "BOOKKEEPER";
-        repoPath = BK_PATH;
+        projName = ProjectsUtils.getProjectNames().get(0);
+        repoPath = ProjectsUtils.getRepoPath().get(0);
         retrieveMetrics();
 
 
 
-        /*files = new ArrayList<>();
+        files = new ArrayList<>();
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
-        projName = "SYNCOPE";
-        repoPath = SY_PATH;
-        retrieveMetrics();*/
+        projName = ProjectsUtils.getProjectNames().get(1);
+        repoPath = ProjectsUtils.getRepoPath().get(1);
+        retrieveMetrics();
 
     }
 
