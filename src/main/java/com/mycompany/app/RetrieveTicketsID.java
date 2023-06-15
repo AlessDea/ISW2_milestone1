@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import static com.mycompany.app.FIlesRet.projName;
 import static com.mycompany.app.Proportion.revisionProportionInc;
 import static com.mycompany.app.GetReleaseInfo.relNames;
 
@@ -159,31 +160,7 @@ public class RetrieveTicketsID {
                 ArrayList<Version> fixedVersions = new ArrayList<>();
 
                 try {
-                    for(int z = 0; z < injVer.length(); z++){
-                        String name = injVer.getJSONObject(z).get("name").toString();
-                        LocalDateTime date = LocalDate.parse(injVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
-                        Version v = null;
-                        if(projName.equals("BOOKKEEPER"))
-                            v = new Version("refs/tags/release-" + name, date);
-                        else
-                            v = new Version("refs/tags/syncope-" + name, date);
-
-                        injectedVersions.add(v);
-                    }
-
-
-
-                    for(int z = 0; z < fixVer.length(); z++){
-                        String name = fixVer.getJSONObject(z).get("name").toString();
-                        LocalDateTime date = LocalDate.parse(fixVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
-                        Version v = null;
-                        if(projName.equals("BOOKKEEPER"))
-                            v = new Version("refs/tags/release-" + name, date);
-                        else
-                            v = new Version("refs/tags/syncope-" + name, date);
-
-                        fixedVersions.add(v);
-                    }
+                    prepareVersions(injVer, fixVer, injectedVersions, fixedVersions, onlyDateFormatter);
                 } catch (JSONException e) {
                     continue;
                 }
@@ -195,9 +172,8 @@ public class RetrieveTicketsID {
                     /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
                      * devo prendere la più piccola delle injected e la più grande delle fixed.
                      * */
-                    if (injectedVersions.isEmpty()) {
-                        iv = null; //injected version not present, must use proportion
-                    } else {
+                    iv = null; //injected version not present, must use proportion
+                    if (!injectedVersions.isEmpty()) {
                         //get the oldest
                         iv = getTheInjectedVer(injectedVersions);
                     }
@@ -219,19 +195,13 @@ public class RetrieveTicketsID {
         } while (i < total);
 
 
-        //assign at each version its defects
-        for(Version v : relNames) {
-            ArrayList<Tickets> defects = new ArrayList<>();
-            for(Tickets t : tickets){
-                if(t.getFv().equals(v)){
-                    defects.add(t);
-                }
-            }
-            v.setFixedDefects(defects);
-        }
+        bindRelsAndDefects();
 
+        setIncrementalProportion();
 
+    }
 
+    public static void setIncrementalProportion(){
         for (Version v : relNames){
 
             if(v.getVerNum() == 1) {
@@ -242,6 +212,47 @@ public class RetrieveTicketsID {
             }
             v.calcMissingIV(relNames); //calculate the missing IVs
 
+        }
+    }
+
+
+    public static void bindRelsAndDefects(){
+        //assign at each version its defects
+        for(Version v : relNames) {
+            ArrayList<Tickets> defects = new ArrayList<>();
+            for(Tickets t : tickets){
+                if(t.getFv().equals(v)){
+                    defects.add(t);
+                }
+            }
+            v.setFixedDefects(defects);
+        }
+    }
+
+    public static void prepareVersions(JSONArray injVer, JSONArray fixVer, List<Version> injectedVersions, ArrayList<Version> fixedVersions, DateTimeFormatter onlyDateFormatter){
+        for(int z = 0; z < injVer.length(); z++){
+            String name = injVer.getJSONObject(z).get("name").toString();
+            LocalDateTime date = LocalDate.parse(injVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
+            Version v = null;
+            if(projName.equals("BOOKKEEPER"))
+                v = new Version("refs/tags/release-" + name, date);
+            else
+                v = new Version("refs/tags/syncope-" + name, date);
+
+            injectedVersions.add(v);
+        }
+
+
+        for(int z = 0; z < fixVer.length(); z++){
+            String name = fixVer.getJSONObject(z).get("name").toString();
+            LocalDateTime date = LocalDate.parse(fixVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
+            Version v = null;
+            if(projName.equals("BOOKKEEPER"))
+                v = new Version("refs/tags/release-" + name, date);
+            else
+                v = new Version("refs/tags/syncope-" + name, date);
+
+            fixedVersions.add(v);
         }
     }
 }

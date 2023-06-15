@@ -42,9 +42,6 @@ public class FIlesRet {
     static final String ADDEDFIELD = "authors";
     static final String REVISIONSFIELD = "revisions";
 
-    /*static final String BK_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/bookkeeper/.git";
-    static final String SY_PATH = "/home/alessandrodea/Scrivania/uni/Magistrale/isw2/isw_22-23/projects/syncope/.git";
-*/
 
     public static void writeOnFile() {
         FileWriter fileWriter = null;
@@ -152,10 +149,8 @@ public class FIlesRet {
         if(name == null)
             return -1;
         for (RepoFile f : files) {
-            if (f.equals(name) && !f.getPaths().isEmpty()) {
-                if (path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
-                    return files.indexOf(f);
-                }
+            if (f.equals(name) && !f.getPaths().isEmpty() && path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
+                return files.indexOf(f);
             }
         }
         return -1;
@@ -185,76 +180,82 @@ public class FIlesRet {
         String[] tkns;
 
         while (treeWalk.next()) {
-            if (treeWalk.getPathString().contains(".java")) {
+            if (treeWalk.getPathString().contains(".java") && !treeWalk.getPathString().contains("/test")) {
 
                 tkns = treeWalk.getPathString().split("/");
-                if (!treeWalk.getPathString().contains("/test")) {
-                    ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString()); //fondamentalmente va bene solo se ha lo stesso nome
 
-                    if (ret >= 0) {
+                ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString()); //fondamentalmente va bene solo se ha lo stesso nome
 
-                        files.get(ret).incAppearances();
-                        files.get(ret).insertRelease(rel);
-                        files.get(ret).insertPath(treeWalk.getPathString());
-                        files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel.getExtendedName()));
-                        files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
-                        files.get(ret).insertAvgSetSize(avgSetSize(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(relNames.indexOf(rel) - 1).getExtendedName()));
-
-                        if (releaseNumber > 1) {
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
-                            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
-                            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
-
-                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
-                            files.get(ret).insertTouchedLOCs(r.get(TOUCHEDFIELD));
-                            files.get(ret).insertLOCAdded(r.get(ADDEDFIELD));
-                        } else {
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
-                            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
-                            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
-
-                            //è la prima release, quindi loc touched e anche le added sono tutte le loc
-                            files.get(ret).insertTouchedLOCs(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
-                            files.get(ret).insertLOCAdded(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
-                        }
-                        files.get(ret).insertWeightedAge(releaseNumber);
-
-                    } else {
-                        RepoFile rf = new RepoFile(tkns[tkns.length - 1]);
-                        rf.insertRelease(rel);
-                        rf.insertPath(treeWalk.getPathString());
-                        rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel.getExtendedName()));
-                        rf.insertChurn(0);
-                        rf.setRevisionFirstAppearance(releaseNumber);
-                        rf.insertAvgSetSize(avgSetSize(repository, treeWalk.getPathString(), rel.getExtendedName(), null));
-
-
-                        if (releaseNumber > 1) {
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
-                            rf.insertAuth(ar.get(AUTHORSFIELD));
-                            rf.insertRevisions(ar.get(REVISIONSFIELD));
-
-                            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
-                            rf.insertTouchedLOCs(r.get(TOUCHEDFIELD));
-                            rf.insertLOCAdded(r.get(ADDEDFIELD));
-                        } else {
-                            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
-                            rf.insertAuth(ar.get(AUTHORSFIELD));
-                            rf.insertRevisions(ar.get(REVISIONSFIELD));
-
-                            //è la prima release, quindi loc touched e anche le added sono tutte le loc
-                            rf.insertTouchedLOCs(rf.getLocs().get(0));
-                            rf.insertLOCAdded(rf.getLocs().get(0));
-                        }
-                        rf.insertWeightedAge(releaseNumber);
-
-                        files.add(rf);
-                    }
+                if (ret >= 0) {
+                    listRepoContentNotFirstApp(ret, rel, releaseNumber, treeWalk);
+                } else {
+                    listRepoContentFirstApp(tkns, rel, releaseNumber, treeWalk);
                 }
             }
         }
     }
 
+
+    public static void listRepoContentNotFirstApp(int ret, Version rel, int releaseNumber, TreeWalk treeWalk) throws IOException, GitAPIException {
+        files.get(ret).incAppearances();
+        files.get(ret).insertRelease(rel);
+        files.get(ret).insertPath(treeWalk.getPathString());
+        files.get(ret).insertLOCs(countLOCs(treeWalk.getPathString(), rel.getExtendedName()));
+        files.get(ret).insertChurn(files.get(ret).getReleases().size() - 1);
+        files.get(ret).insertAvgSetSize(avgSetSize(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(relNames.indexOf(rel) - 1).getExtendedName()));
+
+        if (releaseNumber > 1) {
+            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
+            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
+            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
+
+            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
+            files.get(ret).insertTouchedLOCs(r.get(TOUCHEDFIELD));
+            files.get(ret).insertLOCAdded(r.get(ADDEDFIELD));
+        } else {
+            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
+            files.get(ret).insertAuth(ar.get(AUTHORSFIELD));
+            files.get(ret).insertRevisions(ar.get(REVISIONSFIELD));
+
+            //è la prima release, quindi loc touched e anche le added sono tutte le loc
+            files.get(ret).insertTouchedLOCs(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
+            files.get(ret).insertLOCAdded(files.get(ret).getLocs().get(files.get(ret).getLocs().size() - 1));
+        }
+        files.get(ret).insertWeightedAge(releaseNumber);
+    }
+
+
+
+    public static void listRepoContentFirstApp(String[] tkns, Version rel, int releaseNumber, TreeWalk treeWalk) throws IOException, GitAPIException {
+        RepoFile rf = new RepoFile(tkns[tkns.length - 1]);
+        rf.insertRelease(rel);
+        rf.insertPath(treeWalk.getPathString());
+        rf.insertLOCs(countLOCs(treeWalk.getPathString(), rel.getExtendedName()));
+        rf.insertChurn(0);
+        rf.setRevisionFirstAppearance(releaseNumber);
+        rf.insertAvgSetSize(avgSetSize(repository, treeWalk.getPathString(), rel.getExtendedName(), null));
+
+
+        if (releaseNumber > 1) {
+            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), relNames.get(releaseNumber - 2).getExtendedName());
+            rf.insertAuth(ar.get(AUTHORSFIELD));
+            rf.insertRevisions(ar.get(REVISIONSFIELD));
+
+            Map<String, Integer> r = locTouched(repository, relNames.get(releaseNumber - 2).getExtendedName(), rel.getExtendedName(), treeWalk.getPathString());
+            rf.insertTouchedLOCs(r.get(TOUCHEDFIELD));
+            rf.insertLOCAdded(r.get(ADDEDFIELD));
+        } else {
+            Map<String, Integer> ar = countAuthAndRevs(repository, treeWalk.getPathString(), rel.getExtendedName(), null);
+            rf.insertAuth(ar.get(AUTHORSFIELD));
+            rf.insertRevisions(ar.get(REVISIONSFIELD));
+
+            //è la prima release, quindi loc touched e anche le added sono tutte le loc
+            rf.insertTouchedLOCs(rf.getLocs().get(0));
+            rf.insertLOCAdded(rf.getLocs().get(0));
+        }
+        rf.insertWeightedAge(releaseNumber);
+        files.add(rf);
+    }
 
 
     public static int countLOCs(String filePath, String release) throws IOException {
@@ -568,35 +569,40 @@ public class FIlesRet {
 
         if (nFix > 0) {
             /* devo andare a settare a buggy il file in tutte le release precedenti fino alla INJECTED VERSION (che su jira corrisponde alla AFFECTED VERSION) */
-
-            for (RepoFile f : files) { //scorro tutti i file e arrivo fino a quello d'interesse
-
-                if (f.getPaths().get(0).equals(file.getPaths().get(0))) { //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
-                    /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
-                     * all'affected versions presenti in t */
-                    List<Version> fileRels = f.getReleases();
-                    for (Tickets t : bugs) {
-
-                        if (t.getAffectedVersions().size() > 1) {
-                            int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
-                            if (firstAffRel < 0) {
-                                continue; //doesn't find the release
-                            }
-                            int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size() - 1)) + 1;
-                            for (int i = firstAffRel; i < lastAffRel; i++) {
-                                f.getBuggy().set(i, true);
-
-                            }
-
-                        }
-                    }
-                    break; //il file una volta sola compare nella lista
-                }
-            }
+            buggynessForFile(file, bugs);
         }
         //ritorno il numero di commit che hanno fixato il file, se è pari a 0 allora non è stato fixato
         return nFix;
 
+    }
+
+
+
+    public static void buggynessForFile(RepoFile file, TicketList<Tickets> bugs){
+        for (RepoFile f : files) { //scorro tutti i file e arrivo fino a quello d'interesse
+
+            if (f.getPaths().get(0).equals(file.getPaths().get(0))) { //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
+                /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
+                 * all'affected versions presenti in t */
+                List<Version> fileRels = f.getReleases();
+                for (Tickets t : bugs) {
+
+                    if (t.getAffectedVersions().size() > 1) {
+                        int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
+                        if (firstAffRel < 0) {
+                            continue; //doesn't find the release
+                        }
+                        int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size() - 1)) + 1;
+                        for (int i = firstAffRel; i < lastAffRel; i++) {
+                            f.getBuggy().set(i, true);
+
+                        }
+
+                    }
+                }
+                break; //il file una volta sola compare nella lista
+            }
+        }
     }
 
 

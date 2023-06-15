@@ -38,15 +38,11 @@ public class GetReleaseInfo {
                 .setGitDir(new File(repoPath)).readEnvironment()
                 .findGitDir().build();
 
-
         Git jGit = new Git(repository);
         List<Ref> call = jGit.tagList().call();
 
-
         for (Ref ref : call) {
-
             gitReleases.add(ref.getName());
-
         }
 
     }
@@ -87,12 +83,14 @@ public class GetReleaseInfo {
         for(LocalDateTime ldt : jiraReleases){
             for(LocalDateTime l : releaseNames.keySet()) {
                 if(l.equals(ldt))
-                    if(projName.equals("SYNCOPE"))
+                    if(projName.equals("SYNCOPE")) {
                         tmp.add("refs/tags/syncope-" + releaseNames.get(l)); //per syncope
-                    else
+                    }else {
                         tmp.add("refs/tags/release-" + releaseNames.get(l)); //per bookkeeper
+                    }
             }
         }
+
 
         /* se il progetto è BOOKKEEPER bisogna prende i tag anche da github e togliere, da quelli presi su jira,
         * quelli non presenti da github altrimenti non è possibile fare il resolve del tag. Di conseguenza, dato che le releas
@@ -103,26 +101,12 @@ public class GetReleaseInfo {
 
         /* togli le release che non si trovano su git */
         for(String rel : tmp){
-
-            if(rel.equals("refs/tags/syncope-2.0.0-M1")) //exclude it because causes problems
-                continue;
-
-            if(gitReleases.contains(rel)) {
-                if(releasesInfo.get(rel) != null) {
-                    Version v = new Version(rel, releasesInfo.get(rel), vernum);
-                    relNames.add(v);
-                    vernum++;
-                }
+            if(gitReleases.contains(rel) && releasesInfo.get(rel) != null && !rel.equals("refs/tags/syncope-2.0.0-M1")) {
+                Version v = new Version(rel, releasesInfo.get(rel), vernum);
+                relNames.add(v);
+                vernum++;
             }
         }
-
-
-
-        /*// scarta l'ultimo 50% delle release
-        int len = relNames.size();
-        for(int j =  len - 1; j > len/2; j--){
-            relNames.remove(j);
-        }*/
 
 
     }
