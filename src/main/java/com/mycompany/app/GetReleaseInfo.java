@@ -29,6 +29,8 @@ public class GetReleaseInfo {
     static List<String> gitReleases = new ArrayList<>();
 
 
+    private GetReleaseInfo(){}
+
     /**
      * Le release sono quelle i cui commit hanno un tag.
      * */
@@ -48,13 +50,52 @@ public class GetReleaseInfo {
     }
 
 
-    public static void retrieveReleases() throws IOException, JSONException, GitAPIException {
+    public static void prepareReleasesName(List<String> tmp){
+        for(LocalDateTime ldt : jiraReleases){
+            for(Map.Entry<LocalDateTime, String> rn : releaseNames.entrySet()){
+                LocalDateTime l = rn.getKey();
+                if(l.equals(ldt)) {
+                    if (projName.equals("SYNCOPE")) {
+                        tmp.add("refs/tags/syncope-" + releaseNames.get(l)); //for syncope
+                    } else {
+                        tmp.add("refs/tags/release-" + releaseNames.get(l)); //for bookkeeper
+                    }
+                }
+
+            }
+        }
+    }
+
+
+    /* remove releases that are not present on Jira */
+    public static void filterReleasesWithJira(List<String> tmp){
+        int vernum = 1;
+        for(String rel : tmp){
+            if(gitReleases.contains(rel) && releasesInfo.get(rel) != null) {
+                Version v = new Version(rel, releasesInfo.get(rel), vernum);
+                relNames.add(v);
+                vernum++;
+            }
+        }
+    }
+
+
+    /* Halve the releases and hold just the first 50% */
+    public static void halveReleases(){
+        int len = relNames.size();
+        for (int j = len - 1; j > len / 2; j--) {
+            relNames.remove(j);
+        }
+    }
+
+
+    public static void retrieveReleasesFromJira() throws IOException, JSONException, GitAPIException {
 
         //Fills the arraylist with releases dates and orders them
         //Ignores releases with missing dates
         jiraReleases = new ArrayList<LocalDateTime>();
         Integer i;
-        int vernum = 1;
+
         String url = "https://issues.apache.org/jira/rest/api/2/project/" + projName;
         JSONObject json = readJsonFromUrl(url);
         JSONArray versions = json.getJSONArray("versions");
@@ -64,10 +105,12 @@ public class GetReleaseInfo {
             String name = "";
             String id = "";
             if (versions.getJSONObject(i).has("releaseDate")) {
-                if (versions.getJSONObject(i).has("name"))
+                if (versions.getJSONObject(i).has("name")) {
                     name = versions.getJSONObject(i).get("name").toString();
-                if (versions.getJSONObject(i).has("id"))
+                }
+                if (versions.getJSONObject(i).has("id")) {
                     id = versions.getJSONObject(i).get("id").toString();
+                }
 
                 addRelease(versions.getJSONObject(i).get("releaseDate").toString(), name, id);
             }
@@ -80,34 +123,17 @@ public class GetReleaseInfo {
         });
 
         ArrayList<String> tmp = new ArrayList<>();
-        for(LocalDateTime ldt : jiraReleases){
-            for(LocalDateTime l : releaseNames.keySet()) {
-                if(l.equals(ldt))
-                    if(projName.equals("SYNCOPE")) {
-                        tmp.add("refs/tags/syncope-" + releaseNames.get(l)); //per syncope
-                    }else {
-                        tmp.add("refs/tags/release-" + releaseNames.get(l)); //per bookkeeper
-                    }
-            }
-        }
-
-
-        /* se il progetto è BOOKKEEPER bisogna prende i tag anche da github e togliere, da quelli presi su jira,
-        * quelli non presenti da github altrimenti non è possibile fare il resolve del tag. Di conseguenza, dato che le releas
-        * sono poche, lo faccio prima di dimezzarle */
+        prepareReleasesName(tmp);
 
         retrieveTags();
 
-
         /* togli le release che non si trovano su git */
-        for(String rel : tmp){
-            if(gitReleases.contains(rel) && releasesInfo.get(rel) != null && !rel.equals("refs/tags/syncope-2.0.0-M1")) {
-                Version v = new Version(rel, releasesInfo.get(rel), vernum);
-                relNames.add(v);
-                vernum++;
-            }
-        }
+        filterReleasesWithJira(tmp);
 
+        // scarta l'ultimo 50% delle release
+        if(projName.equals("SYNCOPE")) {
+            halveReleases();
+        }
 
     }
 

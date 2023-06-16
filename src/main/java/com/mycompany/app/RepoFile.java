@@ -94,12 +94,15 @@ public class RepoFile
     * */
     public void insertChurn(int c) {
         int chrn;
+        if(c < 0){
+            this.churn.add(c);
+            return;
+        }
         if(c == 0){ //first release -> added - deleted = LOCs
             chrn = this.locs.get(c);
         }else{
             chrn = Math.abs(this.locs.get(c) - this.locs.get(c-1));
         }
-
 
         this.churn.add(chrn);
     }
@@ -173,6 +176,10 @@ public class RepoFile
     }
 
     public void insertWeightedAge(int curRel) {
+        if(curRel < 0){
+            this.weightedAge.add(curRel);
+            return;
+        }
         this.weightedAge.add((curRel - this.getRevisionFirstAppearance())*this.getTouchedLOCs().get(this.getTouchedLOCs().size()-1));
     }
 

@@ -18,10 +18,9 @@ import utils.ProjectsUtils;
 import java.io.*;
 import java.util.*;
 
+import static com.mycompany.app.GetReleaseInfo.*;
 import static com.mycompany.app.RetrieveTicketsID.retrieveTickets;
 import static com.mycompany.app.RetrieveTicketsID.tickets;
-import static com.mycompany.app.GetReleaseInfo.relNames;
-import static com.mycompany.app.GetReleaseInfo.retrieveReleases;
 
 public class FIlesRet {
 
@@ -33,14 +32,36 @@ public class FIlesRet {
     static List<Ref> tags = null;
     static Repository repository = null;
 
-    static TicketList<Tickets> buggyRelCommits = null;
+    static TicketList buggyRelCommits = null;
 
     static RevCommit theOldestCommit = null;
 
     static final String AUTHORSFIELD = "authors";
-    static final String TOUCHEDFIELD = "authors";
-    static final String ADDEDFIELD = "authors";
+    static final String TOUCHEDFIELD = "touched";
+    static final String ADDEDFIELD = "added";
     static final String REVISIONSFIELD = "revisions";
+
+    public static void findAndDeleteMantReleaseMetrics(Version v){
+        for(RepoFile rf : files){
+            if(rf.getReleases().contains(v)) {
+                removeMantClasses(rf, rf.getReleases().indexOf(v));
+            }
+        }
+    }
+
+    public static void removeMantClasses(RepoFile file, int index){
+        file.getPaths().remove(index);
+        file.getLocs().remove(index);
+        file.getChurn().remove(index);
+        file.getWeightedAge().remove(index);
+        file.getnAuth().remove(index);
+        file.getRevisions().remove(index);
+        file.getTouchedLOCs().remove(index);
+        file.getLocAdded().remove(index);
+        file.getAvgSetSize().remove(index);
+        file.getnFix().remove(index);
+        file.getBuggy().remove(index);
+    }
 
 
     public static void writeOnFile() {
@@ -53,9 +74,14 @@ public class FIlesRet {
             fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Weighted Age, Number of Authors, Revisions, LOC Touched, LOC Added, Avg Set Size, Number of Fix, Buggy");
             fileWriter.append("\n");
             numVersions = relNames.size();
-            for (int i = 0; i < numVersions; i++) {
+            if(projName.equals("SYNCOPE")) {
+                numVersions -= 2; //così escludo le ultime 2
+            }
+
+            for (int i = 0; i < numVersions ; i++) {
 
                 for (RepoFile file : files) {
+
                     /* viene fatta l'assunzione che un file compaia solo in modo sequenziale e non ci sia una sua assenza (un buco) tra release */
                     if ((i >= file.getRevisionFirstAppearance() - 1) && (file.getAppearances() > 0)) {
                         //versione number
@@ -131,8 +157,7 @@ public class FIlesRet {
                     }
                 }
             }
-            /*fileWriter.flush();
-            fileWriter.close();*/
+
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -149,7 +174,9 @@ public class FIlesRet {
         if(name == null)
             return -1;
         for (RepoFile f : files) {
-            if (f.equals(name) && !f.getPaths().isEmpty() && path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
+            boolean b1 = f.equals(name);
+            boolean b2 = f.getPaths().isEmpty();
+            if (b1 && !b2 && path.equals(f.getPaths().get(f.getPaths().size() - 1))) {
                 return files.indexOf(f);
             }
         }
@@ -254,6 +281,83 @@ public class FIlesRet {
             rf.insertLOCAdded(rf.getLocs().get(0));
         }
         rf.insertWeightedAge(releaseNumber);
+        files.add(rf);
+    }
+
+    /**
+     * This method is used only for that releases that are marked with '-Mx' which are manteinance releases. Their aim is to fix bugs.
+     * So it is useless to calculate metrics for this releases, we only want information about the fixes.
+     */
+    public static void listRepoContentMantReleases(Version rel, int releaseNumber) throws IOException, GitAPIException {
+
+        ObjectId head = repository.resolve(rel.getExtendedName());
+        if (head == null)
+            return;
+
+        // a RevWalk allows to walk over commits based on some filtering that is defined
+        RevWalk walk = new RevWalk(repository);
+
+        RevCommit commit = walk.parseCommit(head.toObjectId());
+
+        RevTree tree = commit.getTree();
+
+
+        // now use a TreeWalk to iterate over all files in the Tree recursively
+        // you can set Filters to narrow down the results if needed
+        TreeWalk treeWalk = new TreeWalk(repository);
+        treeWalk.addTree(tree);
+        treeWalk.setRecursive(true);
+
+        int ret;
+        String[] tkns;
+
+        while (treeWalk.next()) {
+            if (treeWalk.getPathString().contains(".java") && !treeWalk.getPathString().contains("/test")) {
+
+                tkns = treeWalk.getPathString().split("/");
+
+                ret = iterateAndCompareFiles(tkns[tkns.length - 1], treeWalk.getPathString()); //fondamentalmente va bene solo se ha lo stesso nome
+
+                if (ret >= 0) {
+                    listRepoContentMantNotFirstApp(ret, rel, treeWalk);
+                } else {
+                    listRepoContentMantFirstApp(tkns, rel, releaseNumber, treeWalk);
+                }
+            }
+        }
+    }
+
+
+    public static void listRepoContentMantNotFirstApp(int ret, Version rel, TreeWalk treeWalk) {
+
+        files.get(ret).insertRelease(rel);
+        files.get(ret).insertPath(treeWalk.getPathString());
+        files.get(ret).insertLOCs(-1);
+        files.get(ret).insertChurn(-1);
+        files.get(ret).insertAvgSetSize(-1);
+        files.get(ret).insertAuth(-1);
+        files.get(ret).insertRevisions(-1);
+        files.get(ret).insertTouchedLOCs(-1);
+        files.get(ret).insertLOCAdded(-1);
+        files.get(ret).insertWeightedAge(-1);
+    }
+
+
+
+    public static void listRepoContentMantFirstApp(String[] tkns, Version rel, int releaseNumber, TreeWalk treeWalk){
+        RepoFile rf = new RepoFile(tkns[tkns.length - 1]);
+        rf.insertRelease(rel);
+        rf.insertPath(treeWalk.getPathString());
+        rf.insertLOCs(-1);
+        rf.insertChurn(-1);
+        rf.setRevisionFirstAppearance(releaseNumber);
+        rf.insertAvgSetSize(-1);
+        rf.insertAuth(-1);
+        rf.insertRevisions(-1);
+        rf.insertTouchedLOCs(-1);
+        rf.insertLOCAdded(-1);
+        rf.insertWeightedAge(-1);
+
         files.add(rf);
     }
 
@@ -522,7 +626,7 @@ public class FIlesRet {
         RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
         int nFix = 0;
-        TicketList<Tickets> bugs = new TicketList<>();
+        TicketList bugs = new TicketList();
 
         LogCommand log;
 
@@ -577,29 +681,32 @@ public class FIlesRet {
     }
 
 
+    public static void setAffectedVersions(TicketList bugs, List<Version> fileRels, RepoFile f){
+        for (Tickets t : bugs) {
+            if (t.getAffectedVersions().size() > 1) {
+                int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
+                if (firstAffRel < 0) {
+                    continue;
+                }
+                int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size() - 1)) + 1;
+                for (int i = firstAffRel; i < lastAffRel; i++) {
+                    f.getBuggy().set(i, true);
 
-    public static void buggynessForFile(RepoFile file, TicketList<Tickets> bugs){
+                }
+
+            }
+        }
+    }
+
+
+    public static void buggynessForFile(RepoFile file, TicketList bugs){
         for (RepoFile f : files) { //scorro tutti i file e arrivo fino a quello d'interesse
 
             if (f.getPaths().get(0).equals(file.getPaths().get(0))) { //controllo il primo, tanto in paths c'è lo stesso ripetuto per ogni release in cui esiste
                 /* a questo punto prendo la lista delle release del file, per ogni bug (etichettato dal ticket t) presente in bugs setto a buggy le release del file corrispondenti
                  * all'affected versions presenti in t */
                 List<Version> fileRels = f.getReleases();
-                for (Tickets t : bugs) {
-
-                    if (t.getAffectedVersions().size() > 1) {
-                        int firstAffRel = fileRels.indexOf(t.getAffectedVersions().get(0));
-                        if (firstAffRel < 0) {
-                            continue; //doesn't find the release
-                        }
-                        int lastAffRel = fileRels.indexOf(t.getAffectedVersions().get(t.getAffectedVersions().size() - 1)) + 1;
-                        for (int i = firstAffRel; i < lastAffRel; i++) {
-                            f.getBuggy().set(i, true);
-
-                        }
-
-                    }
-                }
+                setAffectedVersions(bugs, fileRels, f);
                 break; //il file una volta sola compare nella lista
             }
         }
@@ -642,38 +749,54 @@ public class FIlesRet {
 
         getTheOldestCommit(repository); // prendi l'id del primo commit di sempre
 
-        retrieveReleases(); // prendi la lista di tutte le release: vengono filtrate quelle di jira con quelle prese dai tag di git
+        retrieveReleasesFromJira(); // prendi la lista di tutte le release: vengono filtrate quelle di jira con quelle prese dai tag di git
 
 
-        // per ogni release (tag) lista i file
+        // per ogni release (tag) lista i file e calcola le metriche
         for (Version release : relNames) {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
-            listRepositoryContents(release, relNum); // calcola le metriche
+            if(release.getExtendedName().contains("2.0.0-M1")) {
+                System.out.println(release.getExtendedName());
+                listRepoContentMantReleases(release, relNum); // don't calculate metrics for maintenance release, just take classes for buggyness
+            }else {
+                System.out.println(release.getExtendedName());
+                listRepositoryContents(release, relNum); // calcola le metriche
+            }
         }
 
         // calcola e setta la buggyness
         retrieveTickets(projName);
         retrieveTicketsFromCommit(repository);
 
-
         for (Version rel : relNames) {
             for (RepoFile f : files) {
-                if (relNames.indexOf(rel) == 0)
+                if (relNames.indexOf(rel) == 0) {
                     ret = checkIfBuggy(repository, rel.getExtendedName(), null, f);
-                else
+                }else {
                     ret = checkIfBuggy(repository, rel.getExtendedName(), relNames.get(relNames.indexOf(rel) - 1).getExtendedName(), f);
-
+                }
                 f.insertnFix(ret);
-                // la buggyness viene direttamente settata da checkIfBuggy
             }
         }
 
+        // delete the maintenance release
+        /*if(projName.equals("SYNCOPE")) {
+            for (Version v : relNames) {
+                if (v.getExtendedName().contains("2.0.0-M1")) {
+                    findAndDeleteMantReleaseMetrics(v);
+                    relNames.remove(v);
+                    break;
+                }
+            }
+        }*/
+
+
         // scarta l'ultimo 50% delle release
-        int len = relNames.size();
-        for(int j =  len - 1; j > len/2; j--){
-            relNames.remove(j);
+        if(projName.equals("BOOKKEEPER")) {
+            halveReleases();
         }
+
 
         // Scrivi il file csv
         writeOnFile();
@@ -685,18 +808,18 @@ public class FIlesRet {
 
         ProjectsUtils.getInstance();
 
-        files = new ArrayList<>();
+        /*files = new ArrayList<>();
         tags = new ArrayList<>();
         buggyRelCommits = new TicketList<>();
         projName = ProjectsUtils.getProjectNames().get(0);
         repoPath = ProjectsUtils.getRepoPath().get(0);
-        retrieveMetrics();
+        retrieveMetrics();*/
 
 
 
         files = new ArrayList<>();
         tags = new ArrayList<>();
-        buggyRelCommits = new TicketList<>();
+        buggyRelCommits = new TicketList();
         projName = ProjectsUtils.getProjectNames().get(1);
         repoPath = ProjectsUtils.getRepoPath().get(1);
         retrieveMetrics();

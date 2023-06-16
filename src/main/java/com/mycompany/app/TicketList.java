@@ -2,7 +2,7 @@ package com.mycompany.app;
 
 import java.util.ArrayList;
 
-public class TicketList<T> extends ArrayList<Tickets> {
+public class TicketList extends ArrayList<Tickets> {
 
     public boolean containsCommit(String id){
         for(Tickets t : this){

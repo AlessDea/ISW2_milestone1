@@ -1,6 +1,5 @@
 package utils;
 
-import org.eclipse.jgit.util.IO;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -14,7 +13,6 @@ public class ProjectsUtils {
     private static List<String> projectNames = null;
     private static List<String> repoPath = null;
     private static ProjectsUtils instance = null;
-    private static String logFileName = null;
     private static List<String> projectNamesPaths = null;
 
 
@@ -35,10 +33,6 @@ public class ProjectsUtils {
         return repoPath;
     }
 
-    public static String getLogFileName() {
-        return logFileName;
-    }
-
     public static List<String> getProjectNamesPaths(){
         return projectNamesPaths;
     }
@@ -56,10 +50,9 @@ public class ProjectsUtils {
             JSONObject config = new JSONObject(myJson);
             JSONArray names = config.names();
 
-            logFileName = config.getString(names.getString(0));
+            projectNamesPaths = convertJSONArrayListString(config, names.getString(0));
             projectNames = convertJSONArrayListString(config, names.getString(1));
             repoPath = convertJSONArrayListString(config, names.getString(2));
-            projectNamesPaths = convertJSONArrayListString(config, names.getString(3));
         }
     }
 

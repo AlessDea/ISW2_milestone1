@@ -118,6 +118,17 @@ public class RetrieveTicketsID {
         return null;
     }
 
+    public static void addTicket(String key, Version iv, Version fv, Version ov){
+        Tickets newTicket;
+        if (iv != null) {
+            newTicket = new Tickets(key, iv, fv, ov, relNames);
+        } else {
+            newTicket = new Tickets(key, fv, ov);
+        }
+
+        tickets.add(newTicket);
+    }
+
 
     public static void retrieveTickets(String projName) throws IOException, JSONException {
         Version iv;
@@ -181,14 +192,8 @@ public class RetrieveTicketsID {
                     fv = getTheFixedVer(fixedVersions);
                     if (fv != null && ov.getVerNum() <= fv.getVerNum()) { //without the fixed version the ticket is useless
 
-                        Tickets newTicket;
-                        if (iv != null) {
-                            newTicket = new Tickets(key, iv, fv, ov, relNames);
-                        } else {
-                            newTicket = new Tickets(key, fv, ov);
-                        }
+                        addTicket(key, iv, fv, ov);
 
-                        tickets.add(newTicket);
                     }
                 }
             }
@@ -229,16 +234,17 @@ public class RetrieveTicketsID {
         }
     }
 
+
     public static void prepareVersions(JSONArray injVer, JSONArray fixVer, List<Version> injectedVersions, ArrayList<Version> fixedVersions, DateTimeFormatter onlyDateFormatter){
         for(int z = 0; z < injVer.length(); z++){
             String name = injVer.getJSONObject(z).get("name").toString();
             LocalDateTime date = LocalDate.parse(injVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();
             Version v = null;
-            if(projName.equals("BOOKKEEPER"))
+            if(projName.equals("BOOKKEEPER")) {
                 v = new Version("refs/tags/release-" + name, date);
-            else
+            }else {
                 v = new Version("refs/tags/syncope-" + name, date);
-
+            }
             injectedVersions.add(v);
         }
 
