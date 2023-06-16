@@ -64,7 +64,7 @@ public class FIlesRet {
     }
 
 
-    public static void writeOnFile() {
+    public static void writeOnFile() throws IOException {
         FileWriter fileWriter = null;
         int numVersions;
         String outname = projName + "FilesInfo.csv";
@@ -73,6 +73,8 @@ public class FIlesRet {
             fileWriter = new FileWriter(outname);
         } catch (IOException e) {
             e.printStackTrace();
+        }finally {
+            fileWriter.close();
         }
 
 
@@ -392,6 +394,7 @@ public class FIlesRet {
                         lines++;
                     }
                 }
+                reader.close();
             }
         } catch (IOException e) {
             e.printStackTrace();
