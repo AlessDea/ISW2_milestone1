@@ -158,9 +158,7 @@ public class FIlesRet {
                         file.getLocAdded().remove(0);
                         file.getAvgSetSize().remove(0);
                         file.getnFix().remove(0);
-
-                        if (file.getBuggy().size() > 0)
-                            file.getBuggy().remove(0);
+                        file.getBuggy().remove(0);
 
                         file.decAppearances();
                     }
@@ -821,7 +819,7 @@ public class FIlesRet {
         repoPath = ProjectsUtils.getRepoPath().get(0);
         retrieveMetrics();
 
-       /* // re-init the status of the program
+        // re-init the status of the program
         files = null;
         repoPath = null;
         projName = null;
@@ -836,7 +834,7 @@ public class FIlesRet {
         buggyRelCommits = new TicketList();
         projName = ProjectsUtils.getProjectNames().get(1);
         repoPath = ProjectsUtils.getRepoPath().get(1);
-        retrieveMetrics();*/
+        retrieveMetrics();
 
     }
 
