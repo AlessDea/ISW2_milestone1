@@ -28,6 +28,7 @@ public class GetReleaseInfo {
     static List<Version> relNames = new ArrayList<>(); //lista dei nomi delle release ordinate, la uso in FilesRet.java per ordinarmi quelle di git
     static List<String> gitReleases = new ArrayList<>();
 
+    static final String SY = "SYNCOPE";
 
     private GetReleaseInfo(){}
 
@@ -55,7 +56,7 @@ public class GetReleaseInfo {
             for(Map.Entry<LocalDateTime, String> rn : releaseNames.entrySet()){
                 LocalDateTime l = rn.getKey();
                 if(l.equals(ldt)) {
-                    if (projName.equals("SYNCOPE")) {
+                    if (projName.equals(SY)) {
                         tmp.add("refs/tags/syncope-" + releaseNames.get(l)); //for syncope
                     } else {
                         tmp.add("refs/tags/release-" + releaseNames.get(l)); //for bookkeeper
@@ -131,7 +132,7 @@ public class GetReleaseInfo {
         filterReleasesWithJira(tmp);
 
         // scarta l'ultimo 50% delle release
-        if(projName.equals("SYNCOPE")) {
+        if(projName.equals(SY)) {
             halveReleases();
         }
 
@@ -145,7 +146,7 @@ public class GetReleaseInfo {
 
         if (!jiraReleases.contains(dateTime)) {
             jiraReleases.add(dateTime);
-            if(projName.equals("SYNCOPE")) {
+            if(projName.equals(SY)) {
                 releasesInfo.put("refs/tags/syncope-" + name, dateTime);
             }else {
                 releasesInfo.put("refs/tags/release-" + name, dateTime);

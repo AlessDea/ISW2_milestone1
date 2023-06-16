@@ -57,7 +57,7 @@ public class RetrieveTicketsID {
     }
 
 
-    public static Version getTheOpeningVerName(LocalDateTime d){
+    public static Version getTheOpeningVersion(LocalDateTime d){
 
         //check if it is the first one
         if(d.isBefore(relNames.get(0).getDate()) || d.isEqual(relNames.get(0).getDate())){
@@ -98,7 +98,7 @@ public class RetrieveTicketsID {
     }
 
 
-    public static Version getTheFixedVer(List<Version> fvs){
+    public static Version getTheFixedVersion(List<Version> fvs){
         if(!fvs.isEmpty()) {
             fvs.sort(new Comparator<Version>() {
                 @Override
@@ -129,6 +129,15 @@ public class RetrieveTicketsID {
         tickets.add(newTicket);
     }
 
+
+    public static Version getTheInjectedVersion(List<Version> injectedVersions){
+        Version iv = null;
+        if (!injectedVersions.isEmpty()) {
+            //get the oldest
+            iv = getTheInjectedVer(injectedVersions);
+        }
+        return iv;
+    }
 
     public static void retrieveTickets(String projName) throws IOException, JSONException {
         Version iv;
@@ -177,19 +186,16 @@ public class RetrieveTicketsID {
                 }
 
                 /* conoscendo la data della opening devo prendermi il nome della release corrispondente */
-                ov = getTheOpeningVerName(ovDate);
+                ov = getTheOpeningVersion(ovDate);
                 if(ov != null) {
 
                     /* ora il problema è che le injected e le fixed possono essere più di una, quindi dato che ho considerato le release sequenziali (non parallele come sono effettivamente mantenute)
                      * devo prendere la più piccola delle injected e la più grande delle fixed.
                      * */
-                    iv = null; //injected version not present, must use proportion
-                    if (!injectedVersions.isEmpty()) {
-                        //get the oldest
-                        iv = getTheInjectedVer(injectedVersions);
-                    }
+                    iv = getTheInjectedVersion(injectedVersions); //injected version not present, must use proportion
 
-                    fv = getTheFixedVer(fixedVersions);
+
+                    fv = getTheFixedVersion(fixedVersions);
                     if (fv != null && ov.getVerNum() <= fv.getVerNum()) { //without the fixed version the ticket is useless
 
                         addTicket(key, iv, fv, ov);
@@ -235,7 +241,7 @@ public class RetrieveTicketsID {
     }
 
 
-    public static void prepareVersions(JSONArray injVer, JSONArray fixVer, List<Version> injectedVersions, ArrayList<Version> fixedVersions, DateTimeFormatter onlyDateFormatter){
+    public static void prepareVersions(JSONArray injVer, JSONArray fixVer, List<Version> injectedVersions, List<Version> fixedVersions, DateTimeFormatter onlyDateFormatter){
         for(int z = 0; z < injVer.length(); z++){
             String name = injVer.getJSONObject(z).get("name").toString();
             LocalDateTime date = LocalDate.parse(injVer.getJSONObject(z).get("releaseDate").toString(), onlyDateFormatter).atStartOfDay();

@@ -67,10 +67,17 @@ public class FIlesRet {
     public static void writeOnFile() {
         FileWriter fileWriter = null;
         int numVersions;
+        String outname = projName + "FilesInfo.csv";
+
         try {
-            String outname = projName + "FilesInfo.csv";
-            //Name of CSV for output
             fileWriter = new FileWriter(outname);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        try {
+
             fileWriter.append("Version, Version Name, Name, LOCs, Churn, Age, Weighted Age, Number of Authors, Revisions, LOC Touched, LOC Added, Avg Set Size, Number of Fix, Buggy");
             fileWriter.append("\n");
             numVersions = relNames.size();
@@ -151,7 +158,9 @@ public class FIlesRet {
                         file.getLocAdded().remove(0);
                         file.getAvgSetSize().remove(0);
                         file.getnFix().remove(0);
-                        file.getBuggy().remove(0);
+
+                        if (file.getBuggy().size() > 0)
+                            file.getBuggy().remove(0);
 
                         file.decAppearances();
                     }
@@ -288,7 +297,7 @@ public class FIlesRet {
      * This method is used only for that releases that are marked with '-Mx' which are manteinance releases. Their aim is to fix bugs.
      * So it is useless to calculate metrics for this releases, we only want information about the fixes.
      */
-    public static void listRepoContentMantReleases(Version rel, int releaseNumber) throws IOException, GitAPIException {
+    public static void listRepoContentMantReleases(Version rel, int releaseNumber) throws IOException {
 
         ObjectId head = repository.resolve(rel.getExtendedName());
         if (head == null)
@@ -373,19 +382,26 @@ public class FIlesRet {
         treeWalk.setFilter(PathFilter.create(filePath));
         int lines = 0;
         BufferedReader reader = null;
-        while (treeWalk.next()) {
-            ObjectId objectId = treeWalk.getObjectId(0);
-            ObjectLoader loader = repository.open(objectId);
-            reader = new BufferedReader(new InputStreamReader(loader.openStream()));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                if (!line.trim().isEmpty()) {
-                    lines++;
+
+        try {
+            while (treeWalk.next()) {
+                ObjectId objectId = treeWalk.getObjectId(0);
+                ObjectLoader loader = repository.open(objectId);
+                reader = new BufferedReader(new InputStreamReader(loader.openStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (!line.trim().isEmpty()) {
+                        lines++;
+                    }
                 }
             }
-        }
-        if(reader != null)
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            assert reader != null;
             reader.close();
+        }
+
 
         return lines;
     }
@@ -521,12 +537,15 @@ public class FIlesRet {
         RevWalk walk = new RevWalk(repository);
         Git git = new Git(repository);
 
-        ObjectReader reader;
+        ObjectReader reader = null;
         try {
             reader = repository.newObjectReader();
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
+        }finally {
+            assert reader != null;
+            reader.close();
         }
 
         CanonicalTreeParser newTreeIter = new CanonicalTreeParser();
@@ -757,10 +776,8 @@ public class FIlesRet {
             //per ogni branch cerca tutti i file - excludi HEAD e master
             relNum++;
             if(release.getExtendedName().contains("2.0.0-M1")) {
-                System.out.println(release.getExtendedName());
                 listRepoContentMantReleases(release, relNum); // don't calculate metrics for maintenance release, just take classes for buggyness
             }else {
-                System.out.println(release.getExtendedName());
                 listRepositoryContents(release, relNum); // calcola le metriche
             }
         }
@@ -780,17 +797,6 @@ public class FIlesRet {
             }
         }
 
-        // delete the maintenance release
-        /*if(projName.equals("SYNCOPE")) {
-            for (Version v : relNames) {
-                if (v.getExtendedName().contains("2.0.0-M1")) {
-                    findAndDeleteMantReleaseMetrics(v);
-                    relNames.remove(v);
-                    break;
-                }
-            }
-        }*/
-
 
         // scarta l'ultimo 50% delle release
         if(projName.equals("BOOKKEEPER")) {
@@ -808,13 +814,21 @@ public class FIlesRet {
 
         ProjectsUtils.getInstance();
 
-        /*files = new ArrayList<>();
+        files = new ArrayList<>();
         tags = new ArrayList<>();
-        buggyRelCommits = new TicketList<>();
+        buggyRelCommits = new TicketList();
         projName = ProjectsUtils.getProjectNames().get(0);
         repoPath = ProjectsUtils.getRepoPath().get(0);
-        retrieveMetrics();*/
+        retrieveMetrics();
 
+       /* // re-init the status of the program
+        files = null;
+        repoPath = null;
+        projName = null;
+        tags = null;
+        repository = null;
+        buggyRelCommits = null;
+        theOldestCommit = null;
 
 
         files = new ArrayList<>();
@@ -822,7 +836,7 @@ public class FIlesRet {
         buggyRelCommits = new TicketList();
         projName = ProjectsUtils.getProjectNames().get(1);
         repoPath = ProjectsUtils.getRepoPath().get(1);
-        retrieveMetrics();
+        retrieveMetrics();*/
 
     }
 
